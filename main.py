@@ -35,6 +35,7 @@ from tf_agents.policies import policy_saver
 def column(matrix, i):
     return [row[i] for row in matrix]
 
+## Setup environment
 class ActionResult(Enum):
     VALID_MOVE = 1
     ILLEGAL_MOVE = 2
@@ -205,6 +206,7 @@ train_env = tf_py_environment.TFPyEnvironment(dogEnvironemt)
 eval_env = tf_py_environment.TFPyEnvironment(dogEnvironemt)
 
 
+## DQN Setup
 
 fc_layer_params = [32,64]
 
@@ -237,6 +239,8 @@ agent = dqn_agent.DdqnAgent(
 agent.initialize()
 
 
+## Replay buffer Setup
+
 replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     data_spec=agent.collect_data_spec,
     batch_size=train_env.batch_size,
@@ -245,15 +249,18 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
 replay_buffer_observer = replay_buffer.add_batch
 
 
+## Metrics Setup
 
 train_metrics = [tf_metrics.AverageReturnMetric(), tf_metrics.AverageEpisodeLengthMetric()]
 
+## Driver Setup
 collect_driver = dynamic_step_driver.DynamicStepDriver(
     train_env,
     agent.collect_policy,
     observers=[replay_buffer_observer] + train_metrics,
     num_steps=7)
 
+## Collect trajectories using Random Policy
 
 class ShowProgress:
     def __init__(self, total):
@@ -276,6 +283,7 @@ init_driver = dynamic_step_driver.DynamicStepDriver(
 
 final_time_step, final_policy_state = init_driver.run()
 
+## Verify collected trajectories
 trajectories, buffer_info = replay_buffer.get_next(sample_batch_size=2, num_steps=10)
 
 trajectories._fields
@@ -285,11 +293,16 @@ trajectories._fields
 time_steps, action_steps, next_time_steps = trajectory.to_transition(trajectories)
 time_steps.observation.shape
 
+
+## Create Dataset from Replay Buffer
+
 dataset = replay_buffer.as_dataset(sample_batch_size=200, num_steps=2, num_parallel_calls=3).prefetch(3)
 
+## Run it under common function to make it faster
 collect_driver.run = common.function(collect_driver.run)
 agent.train = common.function(agent.train)
 
+## Train
 
 all_train_loss = []
 all_metrics = []
@@ -336,7 +349,7 @@ axs[1].set_title('Average Episode Length')
 for ax in axs.flat:
     ax.set(xlabel='Number of Iterations', ylabel='Metric Value')
 
-
+## Evaluate
 
 def compute_avg_return(environment, policy, num_episodes=10):
 
@@ -368,6 +381,8 @@ avg_return = compute_avg_return(eval_env, agent.policy, 5)
 
 
 avg_return
+
+## Visualize Episode
 
 def observation_viz(observation):
     numpy_obs = observation.numpy()[0]
@@ -421,6 +436,7 @@ eval_env.reset()
 # Evaluate the agent's policy once before training.
 avg_return = compute_viz(eval_env, agent.policy, 1)
 
+## Checkpoint Saver
 import os
 
 tempdir = "./content/"
@@ -445,7 +461,7 @@ tf_policy_saver = policy_saver.PolicySaver(agent.policy)
 tf_policy_saver.save(policy_dir)
 #!zip -r saved_policy.zip /content/policy/
 
-loaded_policy = tf.saved_model.load("/content/policy")
+loaded_policy = tf.saved_model.load("./content/policy")
 
 eval_timestep = eval_env.reset()
 loaded_action = loaded_policy.action(eval_timestep)
