@@ -1,4 +1,5 @@
 ## Train agent
+import param
 import tensorflow as tf
 from tf_agents.policies import random_tf_policy
 
@@ -34,31 +35,30 @@ class Trainer():
     	self.create_driver()			# Driver Setup
 
     def create_agent(self):
-    	fc_layer_params = [32,64]
-
     	q_net = q_network.QNetwork(
 		            self._train_env.observation_spec(),
 		            self._train_env.action_spec(),
-		            fc_layer_params = fc_layer_params
+		            fc_layer_params = param.FC_LAYERS
 		        )
 
     	self._train_step = tf.Variable(0)
-    	update_period = 2
-    	optimizer = tf.keras.optimizers.Adam(lr=2.5e-3, epsilon=0.001)
+
+    	optimizer = tf.keras.optimizers.Adam(lr = param.ADAM_LR, 
+    					epsilon=param.ADAM_EPSILON)
 
     	epsilon_fn = tf.keras.optimizers.schedules.PolynomialDecay(
-		                initial_learning_rate=1.0, 
-		                decay_steps=250000 // update_period,
-		                end_learning_rate=0.01)
+		                initial_learning_rate=param.DECAY_LR_INIT, 
+		                decay_steps= param.DECAY_STEPS // param.DECAY_UPDATE_PERIOD,
+		                end_learning_rate=param.DECAY_LR_END)
 
     	self._agent = dqn_agent.DdqnAgent(
 		        		self._train_env.time_step_spec(),
 		        		self._train_env.action_spec(),
 		        		q_network=q_net,
 		        		optimizer=optimizer,
-		        		target_update_period=2000,
+		        		target_update_period= param.AGENT_UPDATE_PERIOD,
 		        		td_errors_loss_fn=tf.keras.losses.Huber(reduction="none"),
-		        		gamma=0.99,
+		        		gamma=param.AGENT_GAMMA,
 		        		train_step_counter=self._train_step,
 		        		epsilon_greedy=lambda: epsilon_fn(self._train_step))
     	self._agent.initialize()
@@ -73,7 +73,7 @@ class Trainer():
     	self._replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
 					    data_spec=self._agent.collect_data_spec,
 					    batch_size=self._train_env.batch_size,
-					    max_length=1000000)
+					    max_length=param.BUFFER_LENGTH)
 
     	self._replay_buffer_observer = self._replay_buffer.add_batch
 
@@ -83,7 +83,7 @@ class Trainer():
 					    self._train_env,
 					    self._agent.collect_policy,
 					    observers=[self._replay_buffer_observer] + self._train_metrics,
-					    num_steps=7)
+					    num_steps=param.DRIVER_STEPS)
 
 		
 		
@@ -94,8 +94,8 @@ class Trainer():
     	init_driver = dynamic_step_driver.DynamicStepDriver(
 		    self._train_env,
 		    initial_collect_policy,
-		    observers=[self._replay_buffer.add_batch, Progress_viz(3500)],
-		    num_steps=3500)
+		    observers=[self._replay_buffer.add_batch, Progress_viz(param.DATASET_STEPS)],
+		    num_steps=param.DATASET_STEPS)
 
     	final_time_step, final_policy_state = init_driver.run()
 
@@ -107,7 +107,8 @@ class Trainer():
     		print("time_steps.observation.shape = ", time_steps.observation.shape)
 		
 		# Create Dataset from Replay Buffer
-    	self._dataset = self._replay_buffer.as_dataset(sample_batch_size=200, num_steps=2, num_parallel_calls=3).prefetch(3)
+    	self._dataset = self._replay_buffer.as_dataset(sample_batch_size=param.DATASET_BATCH, 
+    		num_steps=param.DATASET_BUFFER_STEP, num_parallel_calls=param.DATASET_PARALLEL).prefetch(param.DATASET_PREFETCH)
 
     def make_common(self):
 		## Run it under common function to make it faster

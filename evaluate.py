@@ -1,6 +1,6 @@
 ## Evaluation
 import os
-import time
+import datetime
 import numpy as np
 import tensorflow as tf
 from visualize import observation_viz
@@ -47,7 +47,7 @@ class Evaluator():
             print("        Evaluation performance: ", self._avg_return)
 
     def save_model(self):
-        tempdir = "./content/" + str(time.time()) +"/"
+        tempdir = "./content/" + str(datetime.datetime.now()) +"/"
         checkpoint_dir = os.path.join(tempdir, 'checkpoint')
         train_checkpointer = common.Checkpointer(
             ckpt_dir = checkpoint_dir,
@@ -72,4 +72,5 @@ class Evaluator():
 
             eval_timestep = self._eval_env.reset()
             loaded_action = loaded_policy.action(eval_timestep)
+            print("model saved.")
             print("example policy: ", loaded_action)
