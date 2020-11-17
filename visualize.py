@@ -33,6 +33,8 @@ def metrics_viz(all_metrics, all_train_loss):
 	for ax in axs.flat:
 	    ax.set(xlabel='Number of Iterations', ylabel='Metric Value')
 
+	plt.show()
+
 
 def observation_viz(observation, step=None, act=None, epi=None):
 	if step == None:

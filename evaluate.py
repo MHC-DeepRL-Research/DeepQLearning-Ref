@@ -1,6 +1,7 @@
 ## Evaluation
 import os
 import datetime
+import param
 import numpy as np
 import tensorflow as tf
 from visualize import observation_viz
@@ -30,21 +31,24 @@ class Evaluator():
             
             if self._visual_flag:
                 step = observation_viz(time_step.observation)
-            while not time_step.is_last():
+
+            counter = 0
+            while not time_step.is_last() and counter < param.EVAL_MAX_ITER:
                 action_step = self._agent.policy.action(time_step)
                 time_step = self._eval_env.step(action_step.action)
                 episode_return += time_step.reward
-                
+                counter += 1
                 if self._visual_flag:
                     step = observation_viz(time_step.observation, step, action_step.action, episode_return)            
-            
+                if counter == param.EVAL_MAX_ITER:
+                    print("Evaluation ended on max allowed iterations of ", counter)
             total_return += episode_return
 
         self._avg_return = total_return / self._num_episodes
         self._avg_return = self._avg_return.numpy()[0]
 
         if self._visual_flag:
-            print("        Evaluation performance: ", self._avg_return)
+            print("Evaluation performance: ", self._avg_return)
 
     def save_model(self):
         tempdir = "./content/" + str(datetime.datetime.now()) +"/"
