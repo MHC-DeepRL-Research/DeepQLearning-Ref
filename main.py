@@ -3,12 +3,12 @@ import param
 from train import Trainer
 from evaluate import Evaluator
 from visualize import Progress_viz
-from environments import environment_setup, DogAdventure, DogAdventureEnvironment
+from environments import environment_setup, DogAdventureGame, DogAdventureEnvironment
 
 if __name__ == '__main__':
 
     print("Step 1: Environment Setup")
-    dogEnvironment = DogAdventureEnvironment(DogAdventure())
+    dogEnvironment = DogAdventureEnvironment(DogAdventureGame())
     train_env, eval_env = environment_setup(dogEnvironment)
 
     print("Step 2: Trainer Setup")
