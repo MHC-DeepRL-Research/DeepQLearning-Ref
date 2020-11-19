@@ -16,6 +16,14 @@ class Progress_viz:
         if self.counter % 100 == 0:
             print("\r{}/{}".format(self.counter, self.total), end="")
 
+def console_viz(ite, loss, iter_metrics):
+	if ite % 500 == 0:
+		print("\n------------------------")
+		print("Iteration: {}".format(ite))
+		print("Reward Prediction Loss:  {:.2f}".format(ite, loss))
+		print("Explore and exploit:")
+		for i in range(len(iter_metrics)):
+		    print('\t{}: {}'.format(iter_metrics[i].name, iter_metrics[i].result().numpy()))
 
 # demonstrate performance during the training phase
 def metrics_viz(all_metrics, all_train_loss):

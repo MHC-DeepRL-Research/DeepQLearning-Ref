@@ -7,7 +7,8 @@ import tensorflow as tf
 from visualize import observation_viz
 from tf_agents.utils import common
 from tf_agents.policies import policy_saver
-
+import tensorflow.python.util.deprecation as deprecation
+deprecation._PRINT_DEPRECATION_WARNINGS = False
 
 class Evaluator():
     
