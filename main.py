@@ -17,17 +17,16 @@ if __name__ == '__main__':
     # generate training trajectories
     dogTrainer.data_generation()
 
-    # run under common to improve efficiency
+    # Run under common to improve efficiency
     dogTrainer.make_common()
 
     print("Step 3: Train the Model")
     metrics, losses = dogTrainer.train_agent()
 
     print("Step 4: Evaluate Learning Result")
-    # Reset the train step
-    dogTrainer._agent.train_step_counter.assign(0)
-
-    # Evaluate the agent's policy once before training.
+    
+    #dogTrainer._agent.train_step_counter.assign(0) # reset the train step (baseline?)
+    # Evaluate the agent's policy
     dogEvaluator = Evaluator(eval_env, dogTrainer._agent, dogTrainer._replay_buffer, 
                              dogTrainer._train_step, episodes=param.EVAL_EPISODE, 
                              visual_flag=param.VIZ_FLAG)
