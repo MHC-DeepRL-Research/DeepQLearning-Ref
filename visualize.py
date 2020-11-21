@@ -47,32 +47,37 @@ def metrics_viz(all_metrics, all_train_loss):
 
 # demonstrate performance during the evaluation phase
 def observation_viz(observation, step=None, act=None, epi=None):
-	
+
+	# action table: along the diagnal are attack moves
+    # player1      player2 
+	#  6 2 7      14 10 15
+	#  0 . 1       8  .  9
+	#  5 3 4      13 11 12
 	if step == None:
 	    step = 0
 	    print("------------------------\nStep: {}".format(step))
 	else:
 	    print("------------------------\nStep: {}".format(step))
 	    if act < 8:
-	        string_act = " 🐕 "
+	        string_act = " 🐕 player1"
 	    else:
-	    	string_act = " 🐈 "
+	    	string_act = " 🐈 player2"
 	    if act == 0 or act == 8:
 	    	string_act = string_act + " moves left."
 	    elif act == 1 or act == 9:
 	    	string_act = string_act + " moves right."
 	    elif act == 2 or act == 10:
-	    	string_act = string_act + " moves down."
-	    elif act == 3 or act == 11:
 	    	string_act = string_act + " moves up."
+	    elif act == 3 or act == 11:
+	    	string_act = string_act + " moves down."
 	    elif act == 4 or act == 12:
-	    	string_act = string_act + " attacks top right."
-	    elif act == 5 or act == 13:
-	    	string_act = string_act + " attacks top left."
-	    elif act == 6 or act == 14:
 	    	string_act = string_act + " attacks bottom right."
-	    else:
+	    elif act == 5 or act == 13:
 	    	string_act = string_act + " attacks bottom left."
+	    elif act == 6 or act == 14:
+	    	string_act = string_act + " attacks top left."
+	    else:
+	    	string_act = string_act + " attacks top right."
 
 	    print("Action taken: {}".format(act)+string_act)
 	    print("Reward: {} \n".format(epi))

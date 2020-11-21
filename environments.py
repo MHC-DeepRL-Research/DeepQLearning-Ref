@@ -68,6 +68,12 @@ class DogAdventureGame():
         if next_position < 0 or next_position > (self._n_states - 1):
           return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
 
+        if next_position % 6 == 0 and current_position % 6 == 1:
+          return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
+
+        if next_position % 6 == 1 and current_position % 6 == 0:
+          return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
+
         # rule2: reach goal conditions
         if self.is_goal_reached(next_position):
           if player == 2:
@@ -136,9 +142,9 @@ class DogAdventureEnvironment(py_environment.PyEnvironment):
         # action table: along the diagnal are attack moves
         # player1      player2  
         # ---------------------
-        #  5 3 4      13 11 12
+        #  6 2 7      14 10 15
         #  0 . 1       8  .  9
-        #  7 2 6      15 10 14
+        #  5 3 4      13 11 12
 
         self._action_values = {0:-1, 1:1,  2:-6,  3:6,  4:7,  5:5,  6:-7,  7:-5,
                                8:-1, 9:1, 10:-6, 11:6, 12:7, 13:5, 14:-7, 15:-5}

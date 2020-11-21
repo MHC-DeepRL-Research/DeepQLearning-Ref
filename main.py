@@ -21,11 +21,13 @@ if __name__ == '__main__':
     dogTrainer.make_common()
 
     print("Step 3: Train the Model")
+    # reset the train step
+    dogTrainer._agent.train_step_counter.assign(0) 
+
+    # start training the model
     metrics, losses = dogTrainer.train_agent()
 
     print("Step 4: Evaluate Learning Result")
-    
-    #dogTrainer._agent.train_step_counter.assign(0) # reset the train step (baseline?)
     # Evaluate the agent's policy
     dogEvaluator = Evaluator(eval_env, dogTrainer._agent, dogTrainer._replay_buffer, 
                              dogTrainer._train_step, episodes=param.EVAL_EPISODE, 
