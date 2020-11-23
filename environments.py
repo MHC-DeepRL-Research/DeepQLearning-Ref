@@ -1,8 +1,8 @@
 ## Setup environment
-from enum import Enum
-from enum import IntEnum
-
+import param
+import funcs
 import numpy as np
+
 from tf_agents.specs import array_spec
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
@@ -10,121 +10,60 @@ from tf_agents.environments import tf_py_environment
 from tf_agents.environments import utils
 from tf_agents.trajectories import time_step as timeStep
 
-# possible consequences from action
-class ActionResult(Enum):
-    VALID_MOVE = 1
-    ILLEGAL_MOVE = 2
-    FOUND_BONE = 3
-    FOUND_ROBOT = 4
-    GAME_COMPLETE = 5
-    SNEAK_ATTACK = 6
-
-class StateFlag(IntEnum):
-    EMPTY = 0
-    PLAYER1 = 1
-    ROBOT_ZONE = 2
-    BONE_ZONE = 3
-    PLAYER2 = 4
-    GOAL = 5
-
-class DogAdventureGame():
+class CamAdventureGame():
 
     def __init__(self):
-        self._robot_locations = [10,14,25,28]
-        self._bone_locations = [5,7,9,16,19,26,30]
-        self._n_states = 36
+        self._n_locs = param.GRIDS_IN_SPACE
+        self._n_rots = param.CAM_ROT_OPTIONS
         self.reset()
 
     def reset(self):
-        self._state = np.zeros((self._n_states,),dtype=np.int32)
-        self._state[self._robot_locations] = StateFlag.ROBOT_ZONE
-        self._state[self._bone_locations] = StateFlag.BONE_ZONE
-        self._state[0] = StateFlag.PLAYER1
-        self._state[1] = StateFlag.PLAYER2
-        self._state[self._n_states-1] = StateFlag.GOAL
-        self.update_reward_to_goal()
-        self._game_ended = False
+        self._step_counter = 0
+        self._state = np.zeros((self._n_locs,self._n_rots),dtype=np.int32)
 
-    def is_goal_reached(self, position):
-        return self._state[position] == StateFlag.GOAL
+        for i in range(param.CAM_COUNT):
+          angle = 2 * np.pi * i / param.CAM_COUNT
+          coord2Dy = round(param.CAM_INIT_DIST * np.sin(angle)/param.GRID_LENGTH) * param.GRID_LENGTH 
+          coord2Dx = round(param.CAM_INIT_DIST * np.cos(angle)/param.GRID_LENGTH) * param.GRID_LENGTH 
+          coord2D = np.array([coord2Dy, coord2Dx])
+          coord1D = funcs.campose_2Dto1D(coord2D)
+          self._state[coord1D,param.RotFlag.CENTER] = i+1
 
-    def typical_state_update(self, current_position, next_position, player):
-        self._state[current_position] = StateFlag.EMPTY
-        if player == 2:
-          self._state[next_position] = StateFlag.PLAYER2
-        else:
-          self._state[next_position] = StateFlag.PLAYER1
+    def move_cam(self, curr_pose, next_pose, cam):
+        # rule0: up to max iteration
+        self._step_counter += 1
+        if self._step_counter > param.EVAL_MAX_ITER:
+          return param.ActionResult.END_GAME
 
-    def update_reward_to_goal(self):
-        goal = self._n_states-1
-        player1 = np.where(self._state == StateFlag.PLAYER1)[0].item()
-        dist2goal = (goal-player1) % 6 + (goal-player1) // 6
-        self._reward_to_goal = 1.0 / (dist2goal+1.0)
-        return self._reward_to_goal
+        # rule1: out of verticle border conditions
+        if next_pose[0] < 0 or next_pose[0] > (self._n_locs - 1):
+          return param.ActionResult.ILLEGAL_MOVE
 
-    def move_dog(self, current_position, next_position, attack, player):
+        # rule2: out of horizontal border conditions
+        if np.abs(next_pose[0] - curr_pose[0]) % param.GRIDS_PER_EDGE > 1.0:
+          return param.ActionResult.ILLEGAL_MOVE
 
-        # rule1: out of border conditions
-        if next_position < 0 or next_position > (self._n_states - 1):
-          return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
+        # rule3: out of allowable rotation options
+        if next_pose[1] < 0 or next_pose[1] > (self._n_rots - 1):
+          return param.ActionResult.ILLEGAL_MOVE
 
-        if next_position % 6 == 0 and current_position % 6 == 1:
-          return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
+        # rule4: speedy orientation change
+        if next_pose[1] != param.RotFlag.CENTER and curr_pose[1] != param.RotFlag.CENTER:
+          return param.ActionResult.ILLEGAL_MOVE
 
-        if next_position % 6 == 1 and current_position % 6 == 0:
-          return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
+        # rule4: run into other cameras conditions
+        if np.sum(self._state[next_pose[0],:]) > 0 and np.sum(self._state[next_pose[0],:]) != cam+1:
+          return param.ActionResult.ILLEGAL_MOVE
 
-        # rule2: reach goal conditions
-        if self.is_goal_reached(next_position):
-          if player == 2:
-            return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
-          else:
-            self._state[current_position] = StateFlag.EMPTY
-            self._state[next_position] = StateFlag.PLAYER1
-            self._game_ended = True
-            self.update_reward_to_goal()
-            return ActionResult.GAME_COMPLETE, self._reward_to_goal
-
-        # rule3: run into player conditions
-        if self._state[next_position] == StateFlag.PLAYER1 or self._state[next_position] == StateFlag.PLAYER2:
-          return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
-
-        # rule4: run into robot conditions
-        if self._state[next_position] == StateFlag.ROBOT_ZONE:
-          if attack:
-            self.typical_state_update(current_position, next_position, player)
-            self.update_reward_to_goal()
-            return ActionResult.SNEAK_ATTACK, self._reward_to_goal
-          else:
-            self._game_ended = True
-            return ActionResult.FOUND_ROBOT, self._reward_to_goal
-
-        # rule5: run into bone conditions
-        if self._state[next_position] == StateFlag.BONE_ZONE:
-          if attack:
-            return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
-          else:
-            self.typical_state_update(current_position, next_position, player)
-            self.update_reward_to_goal()
-            return ActionResult.FOUND_BONE, self._reward_to_goal
-
-        # rule6: attack nothing conditions
-        if self._state[next_position] == StateFlag.EMPTY and attack:
-          return ActionResult.ILLEGAL_MOVE, self._reward_to_goal
-
-        self.typical_state_update(current_position, next_position, player)
-        self.update_reward_to_goal()
-        return ActionResult.VALID_MOVE, self._reward_to_goal
-
-
-    def game_ended(self):
-        return self._game_ended
+        self._state[curr_pose[0],curr_pose[1]] = 0
+        self._state[next_pose[0],next_pose[1]] = cam+1
+        return param.ActionResult.VALID_MOVE
   
     def game_state(self):
         return self._state
 
 
-class DogAdventureEnvironment(py_environment.PyEnvironment):
+class CamAdventureEnvironment(py_environment.PyEnvironment):
 
     def __init__(self, game):
 
@@ -132,27 +71,36 @@ class DogAdventureEnvironment(py_environment.PyEnvironment):
         self._game = game
 
         # set action range
+        self.action_count = param.CAM_COUNT * param.CAM_ACT_OPTIONS
         self._action_spec = array_spec.BoundedArraySpec(
-            shape=(), dtype=np.int32, minimum=0, maximum=15, name='action')
+            shape=(), dtype=np.int32, minimum=0, maximum=self.action_count-1, name='action')
 
         # set observation range
         self._observation_spec = array_spec.BoundedArraySpec(
-            shape=(self._game._n_states,), dtype=np.int32, minimum=0, maximum=5, name='observation')
+            shape=(self._game._n_locs,self._game._n_rots), dtype=np.int32, 
+            minimum=0, maximum=param.CAM_COUNT, name='observation')
 
-        # action table: along the diagnal are attack moves
-        # player1      player2  
-        # ---------------------
-        #  6 2 7      14 10 15
-        #  0 . 1       8  .  9
-        #  5 3 4      13 11 12
-
-        self._action_values = {0:-1, 1:1,  2:-6,  3:6,  4:7,  5:5,  6:-7,  7:-5,
-                               8:-1, 9:1, 10:-6, 11:6, 12:7, 13:5, 14:-7, 15:-5}
-        
+        # create action dictionary
+        self.create_action_dict()
 
         # make sure the environment is okay
         utils.validate_py_environment(self, episodes=5)
 
+    def create_action_dict(self):
+        # action table: along the diagnal are attack moves
+        self._action_values = {} # the action table
+
+        for i in range(param.CAM_COUNT):
+          self._action_values[i*param.CAM_ACT_OPTIONS + 0] = [                    0,param.RotFlag.CENTER]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 1] = [                    0,param.RotFlag.UP]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 2] = [                    0,param.RotFlag.DOWN]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 3] = [                    0,param.RotFlag.LEFT]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 4] = [                    0,param.RotFlag.RIGHT]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 5] = [-param.GRIDS_PER_EDGE,param.RotFlag.SAME]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 6] = [ param.GRIDS_PER_EDGE,param.RotFlag.SAME]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 7] = [                   -1,param.RotFlag.SAME]
+          self._action_values[i*param.CAM_ACT_OPTIONS + 8] = [                   +1,param.RotFlag.SAME]
+        
     def action_spec(self):
         return self._action_spec
 
@@ -165,53 +113,30 @@ class DogAdventureEnvironment(py_environment.PyEnvironment):
   
     def _step(self, action):    
 
-        if self._game.game_ended():
-            return self.reset()
-
         action = action.item()
-        attack = False
-        player = 1
 
-        # set attack flag
-        if 4 <= action <= 7 or 12 <= action <= 15:
-          attack = True
+        # set cam flag
+        cam = action // param.CAM_ACT_OPTIONS
 
-        # set player flag
-        if 8 <= action <= 15:
-          player = 2
+        # retrieve current pose of the selected camera
+        campose = np.where(self._game.game_state() == cam+1)
+        current_agent_pose = np.array([campose[0].item(), campose[1].item()])
 
-        # set position change after action
-        next_agent_position_direction = self._action_values.get(action)
-        
-        # set current position of the player
-        if player == 2:
-          current_agent_position = np.where(self._game.game_state() == StateFlag.PLAYER2)[0].item()
-        else:
-          current_agent_position = np.where(self._game.game_state() == StateFlag.PLAYER1)[0].item()
-          
+        # update agent's new pose
+        new_agent_pose = self._action_values.get(action)
+        new_agent_pose[0] = new_agent_pose[0] + current_agent_pose[0]
+        if new_agent_pose[1] == param.RotFlag.SAME:
+          new_agent_pose[1] = current_agent_pose[1]
 
-        # update agent's new position
-        new_agent_position = current_agent_position + next_agent_position_direction
-        response, reward_to_goal = self._game.move_dog(current_agent_position,new_agent_position, attack, player)
-
-        # game termination handling
-        if response == ActionResult.GAME_COMPLETE:
-            return timeStep.termination(self._game.game_state(), 10+reward_to_goal)
-
-        elif response == ActionResult.FOUND_ROBOT:
-            return timeStep.termination(self._game.game_state(), -0.8+reward_to_goal)
+        response = self._game.move_cam(current_agent_pose,new_agent_pose, cam)
 
         # game transition handling
-        elif response == ActionResult.ILLEGAL_MOVE:
-            return timeStep.transition(self._game.game_state(), reward=-2+reward_to_goal, discount=1.0)
-        
-        elif response == ActionResult.SNEAK_ATTACK:
-            return timeStep.transition(self._game.game_state(), reward=2+reward_to_goal, discount=1.0)
+        if response == param.ActionResult.END_GAME:
+            return timeStep.termination(self._game.game_state(),reward=10)
+        elif response == param.ActionResult.ILLEGAL_MOVE:
+            return timeStep.transition(self._game.game_state(), reward=-2, discount=1.0)
 
-        elif response == ActionResult.FOUND_BONE:
-            return timeStep.transition(self._game.game_state(), reward=1+reward_to_goal, discount=1.0)
-
-        return timeStep.transition(self._game.game_state(), reward=-0.3+reward_to_goal, discount=1.0)
+        return timeStep.transition(self._game.game_state(), reward=-0.3, discount=1.0)
 
 
 

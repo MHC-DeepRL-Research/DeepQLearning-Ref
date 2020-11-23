@@ -3,14 +3,15 @@ import param
 from train import Trainer
 from evaluate import Evaluator
 from visualize import Progress_viz
-from environments import environment_setup, DogAdventureGame, DogAdventureEnvironment
+from environments import environment_setup, CamAdventureGame, CamAdventureEnvironment
 
 if __name__ == '__main__':
 
     print("Step 1: Environment Setup")
-    dogEnvironment = DogAdventureEnvironment(DogAdventureGame())
-    train_env, eval_env = environment_setup(dogEnvironment)
-
+    camEnvironment = CamAdventureEnvironment(CamAdventureGame())
+    train_env, eval_env = environment_setup(camEnvironment)
+    
+    '''
     print("Step 2: Trainer Setup")
     dogTrainer = Trainer(train_env, n_iterations=param.TRAIN_ITER, visual_flag=param.VIZ_FLAG)
 
@@ -36,3 +37,4 @@ if __name__ == '__main__':
 
     print("Step 5: Checkpoint Saver")
     dogEvaluator.save_model()
+    '''

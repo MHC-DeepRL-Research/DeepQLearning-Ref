@@ -16,6 +16,7 @@ class Progress_viz:
         if self.counter % 100 == 0:
             print("\r{}/{}".format(self.counter, self.total), end="")
 
+
 def console_viz(ite, loss, iter_metrics):
 	if ite % 500 == 0:
 		print("\n------------------------")
