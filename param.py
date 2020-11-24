@@ -3,10 +3,11 @@ from enum import Enum
 from enum import IntEnum
 
 TRAIN_ITER = 1500000
-EVAL_MAX_ITER = 1000
+EVAL_MAX_ITER = 600
 VIZ_FLAG = True
 EVAL_EPISODE = 1
 FC_LAYERS = [32,64]
+QVALUE_DISCOUNT = 1.0
 
 ADAM_LR = 1e-3
 ADAM_EPSILON = 0.001
@@ -21,20 +22,25 @@ AGENT_GAMMA = 0.99
 
 BUFFER_LENGTH = 1000000
 DRIVER_STEPS = 7
-DATASET_STEPS = 350000
+DATASET_STEPS = 3500
 DATASET_PARALLEL = 3
 DATASET_PREFETCH = 3
 DATASET_BATCH = 200
 DATASET_BUFFER_STEP = 2
 
 CAM_COUNT = 6                       					# number of cameras in the system
-GRIDS_PER_EDGE = 201 									# grids in each dimension
-CAM_ACT_OPTIONS = 9                                     # number of actions per camera
-CAM_ROT_OPTIONS = 5                 					# number of camera rotation options given a cam location
-CAM_INIT_DIST = 40                  					# initial camera distance from origin
-CAM_EDGE_LENGTH = 200              					    # the abdominal border edge length (-200 ~ 200)
-GRIDS_IN_SPACE =  GRIDS_PER_EDGE*GRIDS_PER_EDGE 		# total number of grids
-GRID_LENGTH = CAM_EDGE_LENGTH/(GRIDS_PER_EDGE//2)       # how big each grid is
+CAM_STATE_DIM = 5                                       # number of states needed to describe camera pose (X,Y,Z,Xrot,Yrot)
+CAM_INIT_DIST = 0.2                  					# normalized initial camera distance from origin (0~1)
+TOOL_COUNT = 1                      					# number of tools in the system
+TOOL_STATE_DIM = 7                                      # number of states needed to describe tool pose (X,Y,Z,Xrot,Yrot,Xvel,Yvel)
+BELLY_EDGE_LENGTH = 200              					# the belly border edge length (-200 ~ 200)
+ANIMATION_LENGTH = 300                                  # number of iterations in animated point cloud
+ANIMATION_FILE = './content/SurgicalData'               # the matlab file name
+GRIDS_PER_SIDE = 201 									# the number of grid points along each axis
+GRIDS_IN_SPACE =  GRIDS_PER_SIDE*GRIDS_PER_SIDE 		# total number of grids
+GRID_LENGTH = 1.0/(GRIDS_PER_SIDE//2)                   # how large each grid is (normalized to 0~1)
+MOVE_OPTIONS = 9                                        # number of actions per camera
+
 
 # possible consequences from action
 class ActionResult(Enum):
@@ -42,11 +48,8 @@ class ActionResult(Enum):
     ILLEGAL_MOVE = 2
     END_GAME = 3
 
-# possible rotation option given a cam location
-class RotFlag(IntEnum):
-    CENTER = 0
-    UP = 1
-    DOWN = 2
-    LEFT = 3
-    RIGHT = 4
-    SAME = 5
+# possible motion option given an axis
+class Move(IntEnum):
+    SAME = 0
+    POS = 1
+    NEG = -1

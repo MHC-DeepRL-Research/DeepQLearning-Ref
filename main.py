@@ -11,23 +11,23 @@ if __name__ == '__main__':
     camEnvironment = CamAdventureEnvironment(CamAdventureGame())
     train_env, eval_env = environment_setup(camEnvironment)
     
-    '''
+
     print("Step 2: Trainer Setup")
-    dogTrainer = Trainer(train_env, n_iterations=param.TRAIN_ITER, visual_flag=param.VIZ_FLAG)
+    camTrainer = Trainer(train_env, n_iterations=param.TRAIN_ITER, visual_flag=param.VIZ_FLAG)
 
     # generate training trajectories
-    dogTrainer.data_generation()
+    camTrainer.data_generation()
 
     # Run under common to improve efficiency
-    dogTrainer.make_common()
+    camTrainer.make_common()
 
     print("Step 3: Train the Model")
     # reset the train step
-    dogTrainer._agent.train_step_counter.assign(0) 
+    camTrainer._agent.train_step_counter.assign(0) 
 
     # start training the model
-    metrics, losses = dogTrainer.train_agent()
-
+    metrics, losses = camTrainer.train_agent()
+    '''
     print("Step 4: Evaluate Learning Result")
     # Evaluate the agent's policy
     dogEvaluator = Evaluator(eval_env, dogTrainer._agent, dogTrainer._replay_buffer, 
