@@ -67,3 +67,15 @@ def calculate_reconst_reward(surgicaldata,state,timestep):
 	# calculate part of the reward value based on reconstructability
 	reconst_reward = 0.0 # TODO
 	return reconst_reward
+
+def get_tool_pose(obs, tool_idx):
+    assert obs.shape[0] == param.CAM_STATE_DIM*param.CAM_COUNT + param.TOOL_STATE_DIM*param.TOOL_COUNT
+    assert tool_idx >= 0 and  tool_idx < param.TOOL_COUNT
+    offset = param.CAM_STATE_DIM*param.CAM_COUNT
+    return obs[offset+param.TOOL_STATE_DIM*tool_idx:offset+param.TOOL_STATE_DIM*(tool_idx+1)]
+
+def get_cam_pose(obs, cam_idx):
+    assert obs.shape[0] == param.CAM_STATE_DIM*param.CAM_COUNT + param.TOOL_STATE_DIM*param.TOOL_COUNT
+    assert cam_idx >= 0 and  cam_idx < param.CAM_COUNT
+    return obs[param.CAM_STATE_DIM*cam_idx:param.CAM_STATE_DIM*(cam_idx+1)] 
+        

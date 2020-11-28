@@ -27,14 +27,13 @@ if __name__ == '__main__':
 
     # start training the model
     metrics, losses = camTrainer.train_agent()
-    '''
+
     print("Step 4: Evaluate Learning Result")
     # Evaluate the agent's policy
-    dogEvaluator = Evaluator(eval_env, dogTrainer._agent, dogTrainer._replay_buffer, 
-                             dogTrainer._train_step, episodes=param.EVAL_EPISODE, 
+    camEvaluator = Evaluator(eval_env, camTrainer._agent, camTrainer._replay_buffer, 
+                             camTrainer._train_step, episodes=param.EVAL_EPISODE, 
                              visual_flag=param.VIZ_FLAG)
-    dogEvaluator.evaluate_agent()
+    camEvaluator.evaluate_agent()
 
     print("Step 5: Checkpoint Saver")
-    dogEvaluator.save_model()
-    '''
+    camEvaluator.save_model()

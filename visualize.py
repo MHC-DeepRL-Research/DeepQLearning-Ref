@@ -2,6 +2,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import funcs
+import param
 
 # demonstrate the progress ogf generationg dataset
 class Progress_viz:
@@ -49,41 +51,48 @@ def metrics_viz(all_metrics, all_train_loss):
 # demonstrate performance during the evaluation phase
 def observation_viz(observation, step=None, act=None, epi=None):
 
-	# action table: along the diagnal are attack moves
-    # player1      player2 
-	#  6 2 7      14 10 15
-	#  0 . 1       8  .  9
-	#  5 3 4      13 11 12
 	if step == None:
 	    step = 0
 	    print("------------------------\nStep: {}".format(step))
 	else:
 	    print("------------------------\nStep: {}".format(step))
-	    if act < 8:
-	        string_act = " 🐕 player1"
-	    else:
-	    	string_act = " 🐈 player2"
-	    if act == 0 or act == 8:
-	    	string_act = string_act + " moves left."
-	    elif act == 1 or act == 9:
-	    	string_act = string_act + " moves right."
-	    elif act == 2 or act == 10:
-	    	string_act = string_act + " moves up."
-	    elif act == 3 or act == 11:
-	    	string_act = string_act + " moves down."
-	    elif act == 4 or act == 12:
-	    	string_act = string_act + " attacks bottom right."
-	    elif act == 5 or act == 13:
-	    	string_act = string_act + " attacks bottom left."
-	    elif act == 6 or act == 14:
-	    	string_act = string_act + " attacks top left."
-	    else:
-	    	string_act = string_act + " attacks top right."
+	    cam = act // param.MOVE_OPTIONS
 
-	    print("Action taken: {}".format(act)+string_act)
-	    print("Reward: {} \n".format(epi))
 
-	numpy_obs = observation.numpy()[0]
+	    string_act = " (cam"+str(cam.numpy()[0]+1)
+	    if act % param.MOVE_OPTIONS == 0:
+	    	string_act = string_act + " stays put.)"
+	    elif act % param.MOVE_OPTIONS == 1:
+	    	string_act = string_act + " rotates along positive X direction.)\n"
+	    elif act % param.MOVE_OPTIONS == 2:
+	    	string_act = string_act + " rotates along negative X direction.)\n"
+	    elif act % param.MOVE_OPTIONS == 3:
+	    	string_act = string_act + " rotates along positive Y direction.)\n"
+	    elif act % param.MOVE_OPTIONS == 4:
+	    	string_act = string_act + " rotates along negative Y direction.)\n"
+	    elif act % param.MOVE_OPTIONS == 5:
+	    	string_act = string_act + " translates along positive X direction.)\n"
+	    elif act % param.MOVE_OPTIONS == 6:
+	    	string_act = string_act + " translates along negative X direction.)\n"
+	    elif act % param.MOVE_OPTIONS == 7:
+	    	string_act = string_act + " translates along positive Y direction.)\n"
+	    elif act % param.MOVE_OPTIONS == 8:
+	    	string_act = string_act + " translates along negative Y direction.)\n"
+	    print("Action taken: {}".format(act.numpy()[0])+string_act)
+
+	    # summary of the game state
+	    print("Observations:")
+	    numpy_obs = observation.numpy()[0]
+	    for i in range(param.CAM_COUNT):
+	    	print("\tcam"+str(i+1)+" pose (x,y,z,Rotx,Roty): ",funcs.get_cam_pose(numpy_obs, i))
+
+	    for i in range(param.TOOL_COUNT):
+	    	print("\ttool"+str(i+1)+" pose (x,y,z,Rotx,Roty,Velx,Vely): ",funcs.get_tool_pose(numpy_obs, i))
+	    
+	    print("\nReward: {} \n".format(epi))
+
+	'''
+	
 	string_obs = np.array(np.reshape(numpy_obs, (-1, 6)), dtype=np.unicode_)
 	if string_obs[5][5] != "1":
 	    string_obs[5][5] = "❌"
@@ -96,5 +105,6 @@ def observation_viz(observation, step=None, act=None, epi=None):
 	observe_2d.columns = [''] * len(observe_2d.columns)
 	observe_2d = observe_2d.to_string(index=False)
 	print("\n{}\n".format(observe_2d))
+	'''
 
 	return step+1

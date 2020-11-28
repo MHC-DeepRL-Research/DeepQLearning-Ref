@@ -29,7 +29,6 @@ class Evaluator():
         
         for _ in range(self._num_episodes):
             # initialize variables
-            counter = 0
             episode_return = 0.0
             time_step = self._eval_env.reset()
             # plot the game
@@ -37,7 +36,7 @@ class Evaluator():
                 step = observation_viz(time_step.observation)
             
             # start eval game
-            while not time_step.is_last() and counter < param.EVAL_MAX_ITER:
+            while not time_step.is_last() and step < param.EVAL_MAX_ITER:
                 # calculate action based on current state and policy
                 action_step = self._agent.policy.action(time_step)
                 # transition to next state based on chosen action
@@ -46,11 +45,10 @@ class Evaluator():
                 episode_return += time_step.reward
                 # plot the game
                 if self._visual_flag:
-                    step = observation_viz(time_step.observation, step, action_step.action, episode_return)   
+                    step = observation_viz(time_step.observation,step, action_step.action, episode_return)   
                 # max iteration timeout         
-                counter += 1
-                if counter == param.EVAL_MAX_ITER:
-                    print("Evaluation ended on max allowed iterations of ", counter)
+                if step == param.EVAL_MAX_ITER:
+                    print("Evaluation ended on max allowed iterations of ", step)
             # accumulate total reward
             total_return += episode_return
         # calculate average performance

@@ -2,7 +2,7 @@
 from enum import Enum
 from enum import IntEnum
 
-TRAIN_ITER = 1500000
+TRAIN_ITER = 1500
 EVAL_MAX_ITER = 600
 VIZ_FLAG = True
 EVAL_EPISODE = 1

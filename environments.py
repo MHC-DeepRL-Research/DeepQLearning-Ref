@@ -80,34 +80,21 @@ class CamAdventureGame():
         # rule2: run into other cameras conditions
         for i in range(param.CAM_COUNT):
           if i != cam:
-            i_pose = self.get_cam_pose(i)
+            i_pose = funcs.get_cam_pose(self.game_state(),i)
             if np.sum(i_pose[0:3] - next_pose[0:3]) == 0:
               self.env_dynamic_change()
               return param.ActionResult.ILLEGAL_MOVE
 
-        self.set_cam_pose(cam, next_pose)
+        # set next cam pose
+        assert cam >= 0 and  cam < param.CAM_COUNT
+        self._state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)] = next_pose
+
         self.env_dynamic_change()
         return param.ActionResult.VALID_MOVE
 
-    def get_data(self):
+    def game_data(self):
         return self._surgicaldata
-
-    def get_tool_pose(self, tool_idx):
-        assert tool_idx >= 0 and  tool_idx < param.TOOL_COUNT
-        return self._state[param.CAM_STATE_DIM*param.CAM_COUNT*tool_idx:param.CAM_STATE_DIM*param.CAM_COUNT*(tool_idx+1)]
-
-    def get_cam_pose(self, cam_idx):
-        assert cam_idx >= 0 and  cam_idx < param.CAM_COUNT
-        return self._state[param.CAM_STATE_DIM*cam_idx:param.CAM_STATE_DIM*(cam_idx+1)]    
-
-    def set_tool_pose(self, tool_idx, toolinfo):
-        assert tool_idx >= 0 and  tool_idx < param.TOOL_COUNT
-        self._state[param.CAM_STATE_DIM*param.CAM_COUNT*tool_idx:param.CAM_STATE_DIM*param.CAM_COUNT*(tool_idx+1)] = toolpose
-
-    def set_cam_pose(self, cam_idx, campose):
-        assert cam_idx >= 0 and  cam_idx < param.CAM_COUNT
-        self._state[param.CAM_STATE_DIM*cam_idx:param.CAM_STATE_DIM*(cam_idx+1)] = campose
-
+        
     def game_state(self):
         return self._state
 
@@ -172,7 +159,7 @@ class CamAdventureEnvironment(py_environment.PyEnvironment):
         cam = action // param.MOVE_OPTIONS
 
         # retrieve current pose of the selected camera
-        curr_cam_pose = self._game.get_cam_pose(cam)
+        curr_cam_pose = funcs.get_cam_pose(self._game.game_state(),cam)
 
         # update agent new pose
         next_cam_pose = curr_cam_pose
@@ -183,7 +170,7 @@ class CamAdventureEnvironment(py_environment.PyEnvironment):
 
         # game transition handling
         action_reward = funcs.calculate_action_reward(response)
-        reconst_reward = funcs.calculate_reconst_reward(self._game.get_data(),self._game.game_state(),self._game.game_step_counter())
+        reconst_reward = funcs.calculate_reconst_reward(self._game.game_data(),self._game.game_state(),self._game.game_step_counter())
 
         if response == param.ActionResult.END_GAME:
             feedback = timeStep.termination(self._game.game_state(),reward=action_reward+reconst_reward)
