@@ -1,5 +1,6 @@
 ## Visualization
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 import numpy as np
 import funcs
@@ -140,14 +141,29 @@ def observation_viz(observation, surgicaldata, step=None, act=None, epi=None):
 	    	print("\ttool"+str(i+1)+" pose (x,y,z,Rotx,Roty,Velx,Vely): ",toolposes[i,:])
 	    
 	    print("\nReward: {} \n".format(epi))
-
+	
+	# plot result
+	ptLoc = np.array(surgicaldata.get('ptcloud_loc'))
+	ptCol = np.array(surgicaldata.get('ptcloud_col')) / 256.0
+	ptColMarked = np.array(surgicaldata.get('ptcloud_colmarked')) / 256.0
 	loopstep, flipped = funcs.get_loopstep(step)
 
+	fig = plt.figure(2)
+	ax = fig.add_subplot(111,projection='3d')
 
-	# TODO: the point cloud data is here!
-	input(surgicaldata.get('ptCloudAniSmall')[0,loopstep].Location)
+	ax.scatter(ptLoc[loopstep,:,0],ptLoc[loopstep,:,1],ptLoc[loopstep,:,2],c=ptCol[loopstep,:,:])
+	ax.set_xlim(np.array(surgicaldata.get('XLimits_all'))[0])
+	ax.set_ylim(np.array(surgicaldata.get('YLimits_all'))[0])
+	ax.set_zlim(np.array(surgicaldata.get('ZLimits_all'))[0])
 
-	# TODO: the camposes and toolposes ready for use.
+	ax.set_xlabel('X (mm)')
+	ax.set_ylabel('Y (mm)')
+	ax.set_zlabel('Z (mm)')
+	
+	# TODO: 
+	# (1) the camposes and toolposes ready for use. --> dome
+	# (2) save animation
+	# (3) color marked 
 	
 	plt.show()
 	
