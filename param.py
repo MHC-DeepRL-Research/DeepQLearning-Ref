@@ -40,7 +40,8 @@ GRIDS_PER_SIDE = 201 									# the number of grid points along each axis
 GRIDS_IN_SPACE =  GRIDS_PER_SIDE*GRIDS_PER_SIDE 		# total number of grids
 GRID_LENGTH = 1.0/(GRIDS_PER_SIDE//2)                   # how large each grid is (normalized to 0~1)
 MOVE_OPTIONS = 9                                        # number of actions per camera
-
+OBS_SPEC_MAX = 2.0                                      # the max value of the observation spec
+OBS_SPEC_MIN = -1.0                                     # the min value of the observation spec
 
 # possible consequences from action
 class ActionResult(Enum):

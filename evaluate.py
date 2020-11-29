@@ -2,6 +2,7 @@
 import os
 import datetime
 import param
+import scipy.io
 import numpy as np
 import tensorflow as tf
 from visualize import observation_viz
@@ -18,10 +19,10 @@ class Evaluator():
         self._agent = agent
         self._num_episodes = episodes
         self._visual_flag=visual_flag
+        self._surgicaldata = scipy.io.loadmat(param.ANIMATION_FILE)
         # for model saving only
         self._replay_buffer = replay_buffer
         self._train_step = train_step
-
 
     def evaluate_agent(self):
 
@@ -33,7 +34,7 @@ class Evaluator():
             time_step = self._eval_env.reset()
             # plot the game
             if self._visual_flag:
-                step = observation_viz(time_step.observation)
+                step = observation_viz(time_step.observation, self._surgicaldata.copy())
             
             # start eval game
             while not time_step.is_last() and step < param.EVAL_MAX_ITER:
@@ -45,7 +46,7 @@ class Evaluator():
                 episode_return += time_step.reward
                 # plot the game
                 if self._visual_flag:
-                    step = observation_viz(time_step.observation,step, action_step.action, episode_return)   
+                    step = observation_viz(time_step.observation, self._surgicaldata.copy(), step, action_step.action, episode_return)   
                 # max iteration timeout         
                 if step == param.EVAL_MAX_ITER:
                     print("Evaluation ended on max allowed iterations of ", step)

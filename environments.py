@@ -19,6 +19,7 @@ class CamAdventureGame():
         self._n_states = self._cam_states + self._tool_states 
 
         self._surgicaldata = scipy.io.loadmat(param.ANIMATION_FILE)
+
         self._breathdata =  np.array(self._surgicaldata.get('breathing_val'))
         self._tooldata = np.array(self._surgicaldata.get('toolinfo'))
         self.reset()
@@ -49,21 +50,18 @@ class CamAdventureGame():
 
         # get dynamic tool information
         for i in range(param.TOOL_COUNT):
-          toolinfo = funcs.get_dynamic_toolinfo(self._tooldata, self._step_counter)
+          toolinfo = funcs.dynamic_toolinfo_from_data(self._tooldata.copy(), self._step_counter)
           for j in range(param.TOOL_STATE_DIM):
             self._state[param.CAM_STATE_DIM*param.CAM_COUNT+j] = toolinfo[j]
 
         # apply abdomenal changes due to breathing
-        toolX = toolinfo[0]
-        toolY = toolinfo[1]
-        toolZ = toolinfo[2]
         for i in range(param.CAM_COUNT):
           camX = self._state[param.CAM_STATE_DIM*i+0] 
           camY = self._state[param.CAM_STATE_DIM*i+1] 
-          camZ = funcs.get_dynamic_camZ(self._breathdata, camX, camY, self._step_counter)
+          camZ = funcs.dynamic_camZ_from_data(self._breathdata.copy(), camX, camY, self._step_counter)
           self._state[param.CAM_STATE_DIM*i+2] = camZ
-          self._state[param.CAM_STATE_DIM*i+3] = funcs.calculate_angle(camZ,camX,toolZ,toolX)
-          self._state[param.CAM_STATE_DIM*i+4] = funcs.calculate_angle(camZ,camY,toolZ,toolY)
+          self._state[param.CAM_STATE_DIM*i+3] = funcs.calculate_angle(camZ,camX,toolinfo[2],toolinfo[0])
+          self._state[param.CAM_STATE_DIM*i+4] = funcs.calculate_angle(camZ,camY,toolinfo[2],toolinfo[1])
 
 
     def move_cam(self, curr_pose, next_pose, cam):
@@ -73,7 +71,8 @@ class CamAdventureGame():
 
         # rule1: out of allowable border conditions
         for i in range(param.CAM_STATE_DIM):
-          if next_pose[i] < -1.0 or next_pose[i] > 1.0:
+          if next_pose[i] < param.OBS_SPEC_MIN or next_pose[i] > param.OBS_SPEC_MAX:
+            print("[WARNING]: illegal move. camera moved out of border. The system will keep running.")
             self.env_dynamic_change()
             return param.ActionResult.ILLEGAL_MOVE
 
@@ -82,21 +81,22 @@ class CamAdventureGame():
           if i != cam:
             i_pose = funcs.get_cam_pose(self.game_state(),i)
             if np.sum(i_pose[0:3] - next_pose[0:3]) == 0:
+              print("[WARNING]: illegal move. camera collided with another camera. The system will keep running.")
               self.env_dynamic_change()
               return param.ActionResult.ILLEGAL_MOVE
 
         # set next cam pose
         assert cam >= 0 and  cam < param.CAM_COUNT
+        assert (curr_pose == self._state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)]).all()
         self._state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)] = next_pose
-
         self.env_dynamic_change()
         return param.ActionResult.VALID_MOVE
 
     def game_data(self):
-        return self._surgicaldata
+        return self._surgicaldata.copy()
         
     def game_state(self):
-        return self._state
+        return self._state.copy()
 
     def game_step_counter(self):
         return self._step_counter
@@ -117,7 +117,7 @@ class CamAdventureEnvironment(py_environment.PyEnvironment):
         # set observation range
         self._observation_spec = array_spec.BoundedArraySpec(
             shape=(self._game._n_states,), dtype=np.float32, 
-            minimum=-1.0, maximum=2.0, name='observation')
+            minimum=param.OBS_SPEC_MIN, maximum=param.OBS_SPEC_MAX, name='observation')
 
         # create action dictionary
         self.create_action_dict()
@@ -146,6 +146,9 @@ class CamAdventureEnvironment(py_environment.PyEnvironment):
     def observation_spec(self):
         return self._observation_spec
 
+    def get_game_data(self):
+        return self._game.game_data()
+
     def _reset(self):
         self._game.reset()
         return timeStep.restart(self._game.game_state())
@@ -162,15 +165,17 @@ class CamAdventureEnvironment(py_environment.PyEnvironment):
         curr_cam_pose = funcs.get_cam_pose(self._game.game_state(),cam)
 
         # update agent new pose
-        next_cam_pose = curr_cam_pose
+        next_cam_pose = curr_cam_pose.copy()
         for i in range(param.CAM_STATE_DIM):
           next_cam_pose[i] = next_cam_pose[i] + action_vals[i] * param.GRID_LENGTH
 
-        response = self._game.move_cam(curr_cam_pose, next_cam_pose, cam)
+        assert (next_cam_pose != curr_cam_pose).any() or (action % param.MOVE_OPTIONS == 0)
+
+        response = self._game.move_cam(curr_cam_pose.copy(), next_cam_pose.copy(), cam)
 
         # game transition handling
         action_reward = funcs.calculate_action_reward(response)
-        reconst_reward = funcs.calculate_reconst_reward(self._game.game_data(),self._game.game_state(),self._game.game_step_counter())
+        reconst_reward = funcs.calculate_reconst_reward(self.get_game_data(),self._game.game_state(),self._game.game_step_counter())
 
         if response == param.ActionResult.END_GAME:
             feedback = timeStep.termination(self._game.game_state(),reward=action_reward+reconst_reward)

@@ -49,7 +49,7 @@ def metrics_viz(all_metrics, all_train_loss):
 	plt.show()
 
 # demonstrate performance during the evaluation phase
-def observation_viz(observation, step=None, act=None, epi=None):
+def observation_viz(observation, surgicaldata, step=None, act=None, epi=None):
 
 	if step == None:
 	    step = 0
@@ -82,29 +82,29 @@ def observation_viz(observation, step=None, act=None, epi=None):
 
 	    # summary of the game state
 	    print("Observations:")
-	    numpy_obs = observation.numpy()[0]
+	    numpy_obs = observation.numpy()[0].copy()
+	    camposes = np.zeros((param.CAM_COUNT,param.CAM_STATE_DIM))
 	    for i in range(param.CAM_COUNT):
-	    	print("\tcam"+str(i+1)+" pose (x,y,z,Rotx,Roty): ",funcs.get_cam_pose(numpy_obs, i))
+	    	camposes[i,:] = funcs.get_cam_pose(numpy_obs.copy(), i)
+	    	camposes[i,:] = funcs.revert_normalize_cam(camposes[i,:].copy())
+	    	print("\tcam"+str(i+1)+" pose (x,y,z,Rotx,Roty): ",camposes[i,:])
 
+	    toolposes = np.zeros((param.TOOL_COUNT,param.TOOL_STATE_DIM))
 	    for i in range(param.TOOL_COUNT):
-	    	print("\ttool"+str(i+1)+" pose (x,y,z,Rotx,Roty,Velx,Vely): ",funcs.get_tool_pose(numpy_obs, i))
+	    	toolposes[i,:] = funcs.get_tool_pose(numpy_obs.copy(), i)
+	    	toolposes[i,:] = funcs.revert_normalize_tool(toolposes[i,:].copy())
+	    	print("\ttool"+str(i+1)+" pose (x,y,z,Rotx,Roty,Velx,Vely): ",toolposes[i,:])
 	    
 	    print("\nReward: {} \n".format(epi))
 
-	'''
-	
-	string_obs = np.array(np.reshape(numpy_obs, (-1, 6)), dtype=np.unicode_)
-	if string_obs[5][5] != "1":
-	    string_obs[5][5] = "❌"
-	string_obs = np.where(string_obs=="1","🐕", string_obs) 
-	string_obs = np.where(string_obs=="2","🤖", string_obs)
-	string_obs = np.where(string_obs=="3","🍖", string_obs)
-	string_obs = np.where(string_obs=="0","⬚", string_obs)
-	string_obs = np.where(string_obs=="4","🐈", string_obs)
-	observe_2d = pd.DataFrame(string_obs)
-	observe_2d.columns = [''] * len(observe_2d.columns)
-	observe_2d = observe_2d.to_string(index=False)
-	print("\n{}\n".format(observe_2d))
-	'''
+	loopstep, flipped = funcs.get_loopstep(step)
 
+
+	# TODO: the point cloud data is here!
+	# input(surgicaldata.get('ptCloudAniSmall')[0,loopstep])
+
+	# TODO: the camposes and toolposes ready for use.
+	
+	plt.show()
+	
 	return step+1
