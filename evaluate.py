@@ -13,18 +13,24 @@ deprecation._PRINT_DEPRECATION_WARNINGS = False
 
 class Evaluator():
     
-    def __init__(self, eval_env, agent, replay_buffer, train_step, episodes=10, visual_flag=False):
+    def __init__(self, eval_env, agent=None, replay_buffer=None, train_step=None):
         self._eval_env = eval_env
         self._eval_env.reset()      #reset eval environment
         self._agent = agent
-        self._num_episodes = episodes
-        self._visual_flag=visual_flag
+        self._num_episodes = param.EVAL_EPISODE
+        self._visual_flag = param.VIZ_FLAG
         self._surgicaldata = scipy.io.loadmat(param.ANIMATION_FILE)
         # for model saving only
         self._replay_buffer = replay_buffer
         self._train_step = train_step
 
-    def evaluate_agent(self):
+    def evaluate_agent(self, dirname=None):
+
+        if dirname == None:
+            trained_policy = self._agent.policy
+        else:
+            policy_dir = "./content/" + dirname +"/policy"
+            trained_policy = tf.saved_model.load(policy_dir)
 
         total_return = 0.0
         
@@ -39,7 +45,7 @@ class Evaluator():
             # start eval game
             while not time_step.is_last() and step < param.EVAL_MAX_ITER:
                 # calculate action based on current state and policy
-                action_step = self._agent.policy.action(time_step)
+                action_step = trained_policy.action(time_step)
                 # transition to next state based on chosen action
                 time_step = self._eval_env.step(action_step.action)
                 # accumulate episode reward

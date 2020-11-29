@@ -42,6 +42,7 @@ GRID_LENGTH = 1.0/(GRIDS_PER_SIDE//2)                   # how large each grid is
 MOVE_OPTIONS = 9                                        # number of actions per camera
 OBS_SPEC_MAX = 2.0                                      # the max value of the observation spec
 OBS_SPEC_MIN = -1.0                                     # the min value of the observation spec
+EVAL_POLICY_DIR = "2020-11-29 10:03:48.896132"          # the default trained policy for evaluation
 
 # possible consequences from action
 class ActionResult(Enum):
