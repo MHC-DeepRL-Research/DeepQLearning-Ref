@@ -95,3 +95,51 @@ def revert_normalize_tool(toolpose):
         else:
         	toolpose[i] = toolpose[i] * param.BELLY_EDGE_LENGTH	        # normalize pos and vel
     return toolpose
+
+def truncated_cam_cone(campose, conesize, coneR1):
+    # plot the truncated cone representing the camera view
+    p_base = campose[:3]
+    # vector in direction of axis
+    tanx = np.tan(campose[3])
+    tany = np.tan(campose[4])
+    v = [-conesize*tanx, -conesize*tany, -conesize]
+    # find magnitude of vector
+    mag = np.linalg.norm(v)
+    # unit vector in direction of axis
+    v = v / mag
+    # make some vector not in the same direction as v
+    not_v = np.array([1, 1, 0])
+    if (v == not_v).all():
+        not_v = np.array([0, 1, 0])
+    # make vector perpendicular to v
+    n1 = np.cross(v, not_v)
+    # print n1,'\t',norm(n1)
+    # normalize n1
+    n1 /= np.linalg.norm(n1)
+    # make unit vector perpendicular to v and n1
+    n2 = np.cross(v, n1)
+    # surface ranges over t from 0 to length of axis and 0 to 2*pi
+    n = 20
+    t = np.linspace(0, mag, n)
+    theta = np.linspace(0, 2 * np.pi, n)
+    # use meshgrid to make 2d arrays
+    t, theta = np.meshgrid(t, theta)
+    R = np.linspace(param.CONE_R0, coneR1, n)
+    # generate coordinates for surface
+    X, Y, Z = [p_base[i] + v[i] * t + R *
+               np.sin(theta) * n1[i] + R * np.cos(theta) * n2[i] for i in [0, 1, 2]]
+
+    return X, Y, Z
+
+    
+def mkdir_p(mypath):
+    # Creates a directory. equivalent to using mkdir -p on the command line
+    from errno import EEXIST
+    from os import makedirs,path
+
+    try:
+        makedirs(mypath)
+    except OSError as exc: # Python >2.5
+        if exc.errno == EEXIST and path.isdir(mypath):
+            pass
+        else: raise

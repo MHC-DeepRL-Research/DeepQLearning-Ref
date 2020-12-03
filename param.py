@@ -2,9 +2,10 @@
 from enum import Enum
 from enum import IntEnum
 
-TRAIN_ITER = 1500
-EVAL_MAX_ITER = 600
 VIZ_FLAG = True
+TRAIN_ITER = 1500
+EVAL_MAX_ITER = 3
+
 EVAL_EPISODE = 1
 FC_LAYERS = [32,64]
 QVALUE_DISCOUNT = 1.0
@@ -35,6 +36,7 @@ TOOL_COUNT = 1                      					# number of tools in the system
 TOOL_STATE_DIM = 7                                      # number of states needed to describe tool pose (X,Y,Z,Xrot,Yrot,Xvel,Yvel)
 BELLY_EDGE_LENGTH = 200              					# the belly border edge length (-200 ~ 200)
 ANIMATION_LENGTH = 300                                  # number of iterations in animated point cloud
+ANIMATION_FRAMERATE = 33.0/1000.0                       # ms per frame in animation
 ANIMATION_FILE = './content/SurgicalData'               # the matlab file name
 GRIDS_PER_SIDE = 201 									# the number of grid points along each axis
 GRIDS_IN_SPACE =  GRIDS_PER_SIDE*GRIDS_PER_SIDE 		# total number of grids
@@ -42,7 +44,11 @@ GRID_LENGTH = 1.0/(GRIDS_PER_SIDE//2)                   # how large each grid is
 MOVE_OPTIONS = 9                                        # number of actions per camera
 OBS_SPEC_MAX = 2.0                                      # the max value of the observation spec
 OBS_SPEC_MIN = -1.0                                     # the min value of the observation spec
-EVAL_POLICY_DIR = "2020-11-29 10:03:48.896132"          # the default trained policy for evaluation
+EVAL_POLICY_DIR = "./content/20201203-082235"           # the default trained policy for evaluation
+
+CONE_LENGTH = 20
+CONE_R0 = 0
+CONE_R1 = 10
 
 # possible consequences from action
 class ActionResult(Enum):

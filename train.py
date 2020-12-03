@@ -1,5 +1,7 @@
 ## Train agent
+import os
 import param
+import time
 import tensorflow as tf
 from tf_agents.policies import random_tf_policy
 
@@ -24,19 +26,24 @@ deprecation._PRINT_DEPRECATION_WARNINGS = False
 
 class Trainer():
 	
-    def __init__(self, train_env, n_iterations, visual_flag=True):
-    	self._train_env = train_env
-    	self._visual_flag = visual_flag
-    	self._n_iterations = n_iterations
+    def __init__(self, train_env):
+        self._train_env = train_env
+        self._visual_flag = param.VIZ_FLAG
+        self._n_iterations = param.TRAIN_ITER
+
+        # create save folders
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        self._savedir = "./content/" + timestr
+        self._viz_dir = os.path.join(self._savedir,"visual")
 
     	# two things returned from train function
-    	self.all_train_loss = []
-    	self.all_metrics = []
+        self.all_train_loss = []
+        self.all_metrics = []
 		
-    	self.create_agent()			# DQN agent Setup		
-    	self.create_replay_buffer()	# Replay Buffer Setup
-    	self.create_metrics()		# Metrics Setup
-    	self.create_driver()		# Driver Setup
+        self.create_agent()			# DQN agent Setup		
+        self.create_replay_buffer()	# Replay Buffer Setup
+        self.create_metrics()		# Metrics Setup
+        self.create_driver()		# Driver Setup
 
     def create_agent(self):
     	# a deep neural network to learn Q(s,a)
@@ -134,6 +141,10 @@ class Trainer():
     	self._collect_driver.run = common.function(self._collect_driver.run)
     	self._agent.train = common.function(self._agent.train)
 
+    # return the save directory for aggregating all results in the same folder
+    def get_savedir(self):
+        return self._savedir
+
     def train_agent(self):
     	# make dataset iterable so we can later call next() to retrieve each batch
 	    iterator = iter(self._dataset) 
@@ -164,7 +175,7 @@ class Trainer():
 
 	    # show training result in plots
 	    if self._visual_flag:
-    		metrics_viz(self.all_metrics, self.all_train_loss)
+    		metrics_viz(self.all_metrics, self.all_train_loss, self._viz_dir)
 
     	# all metrics: focuses on how well the collect driver navigates the environment with learned policy
     	# all train loss: focuses on how well the network predicts the reward, despite the action taken

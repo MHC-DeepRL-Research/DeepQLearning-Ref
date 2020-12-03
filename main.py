@@ -18,7 +18,7 @@ if __name__ == '__main__':
     if response == 1: 
 
         print("Step 2: Trainer Setup")
-        camTrainer = Trainer(train_env, n_iterations=param.TRAIN_ITER, visual_flag=param.VIZ_FLAG)
+        camTrainer = Trainer(train_env)
 
         # generate training trajectories
         camTrainer.data_generation()
@@ -35,7 +35,8 @@ if __name__ == '__main__':
 
         print("Step 4: Evaluate Learning Result")
         # Evaluate the agent's policy
-        camEvaluator = Evaluator(eval_env, camTrainer._agent, camTrainer._replay_buffer, camTrainer._train_step)
+        camEvaluator = Evaluator(eval_env, camTrainer.get_savedir(), 
+            camTrainer._agent, camTrainer._replay_buffer, camTrainer._train_step)
         camEvaluator.evaluate_agent()
 
         print("Step 5: Checkpoint Saver")
@@ -46,5 +47,5 @@ if __name__ == '__main__':
         print("Step 2: Load Learned Policy")
         print("Step 3: Evaluate Learning Result")
         # Evaluate the trained policy
-        camEvaluator = Evaluator(eval_env)
-        camEvaluator.evaluate_agent(dirname)
+        camEvaluator = Evaluator(eval_env, dirname)
+        camEvaluator.evaluate_agent()
