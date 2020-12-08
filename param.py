@@ -46,9 +46,16 @@ OBS_SPEC_MAX = 2.0                                      # the max value of the o
 OBS_SPEC_MIN = -1.0                                     # the min value of the observation spec
 EVAL_POLICY_DIR = "./content/20201203-082235"           # the default trained policy for evaluation
 
-CONE_LENGTH = 20
-CONE_R0 = 0
-CONE_R1 = 10
+RECONST_EPSILON = 0.001                                 # epsilon for the reconstruction reward W function in funcs.py
+
+CONE_LENGTH = 20										# camera viewing cone length (for drawing)
+CONE_R0 = 0												# camera viewing cone inner radius (for drawing)
+CONE_R1 = 10											# camera viewing cone outer radius (for drawing)
+CAM_FOV = 0.523599 										# camera viewing angle (30 degrees)
+
+RANSAC_TRIALS = 10
+N_NEIGHBORS = 8
+
 
 # possible consequences from action
 class ActionResult(Enum):
