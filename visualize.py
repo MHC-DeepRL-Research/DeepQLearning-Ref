@@ -179,7 +179,7 @@ def observation_viz(observation, surgicaldata, vizdir, saveflag, step=None, act=
 		breathdata = np.array(surgicaldata.get('breathing_val'))
 		domeZ = funcs.dynamic_camZ_from_data(breathdata, domeX, domeY, loopstep)
 		ax1.plot_surface(domeX*param.BELLY_EDGE_LENGTH, domeY*param.BELLY_EDGE_LENGTH, 
-			domeZ*param.BELLY_EDGE_LENGTH, cmap='summer', alpha=0.2, linewidth=5, antialiased=False)
+			domeZ*param.BELLY_EDGE_LENGTH, cmap='blue', alpha=0.2, linewidth=5, antialiased=False)
 
 		for i in range(param.CAM_COUNT):
 			coneX, coneY, coneZ = funcs.truncated_cam_cone(camposes[i,:],param.CONE_LENGTH,param.CONE_R1)

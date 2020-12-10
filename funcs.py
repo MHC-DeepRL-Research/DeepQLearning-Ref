@@ -7,15 +7,16 @@ import random
 
 def unit_vector(vector):
     # Returns the unit vector of the vector
-    norm = np.linalg.norm(vector)
+	norm = np.linalg.norm(vector)
 	if norm == 0:
 		raise ValueError('zero norm')
 	else:
 		normalized = vector / norm
-    return normalized
+	return normalized
 
 def angle_between(v1, v2):
     # Returns the angle in radians between vectors 'v1' and 'v2'unit_vector(v1)
+    v1_u = unit_vector(v1)
     v2_u = unit_vector(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
@@ -92,13 +93,13 @@ def get_tool_pose(obs, tool_idx):
 
 def get_tool_poses(obs,norm_flag=True):
 	# get the poses of all tools from observations
-    toolposes = np.zeros(param.TOOL_COUNT,3)
+	toolposes = np.zeros((param.TOOL_COUNT,param.TOOL_STATE_DIM))
 	for i in range(param.TOOL_COUNT):
-		if norm_flag
+		if norm_flag:
 			toolposes[i,:] = np.array(get_tool_pose(obs,i))
 		else:
 			toolposes[i,:] = np.array(revert_normalize_tool(get_tool_pose(obs,i)))
-    return toolposes
+	return toolposes
 
 def get_cam_pose(obs, cam_idx):
 	# get the pose of the ith camera from observations
@@ -108,13 +109,13 @@ def get_cam_pose(obs, cam_idx):
 
 def get_cam_poses(obs,norm_flag=True):
 	# get the poses of all tools from observations
-    camposes = np.zeros(param.CAM_COUNT,3)
+	camposes = np.zeros((param.CAM_COUNT,param.CAM_STATE_DIM))
 	for i in range(param.CAM_COUNT):
-		if norm_flag
+		if norm_flag:
 			camposes[i,:] = np.array(get_cam_pose(obs,i))
 		else:
 			camposes[i,:] = np.array(revert_normalize_cam(get_cam_pose(obs,i)))
-    return camposes
+	return camposes
 
 def surface_normal_newell(points):
 	# calculate surface normal from three points using the newell method
@@ -134,7 +135,7 @@ def surface_normal_newell(points):
 
 def surface_normal_cross(points):
 	# calculate surface normal from three points using cross product
-	n = np.cross(points[1,:]-poly[0,:],poly[2,:]-poly[0,:])
+	n = np.cross(points[1,:]-points[0,:],points[2,:]-points[0,:])
 
 	normalized = unit_vector(n)
 	if normalized[2] < 0:
@@ -145,42 +146,50 @@ def surface_normal_cross(points):
 def closest_point(points, idx, n_neighbors):
 	# find k closest points to idx point
 	assert n_neighbors >= 0
-	assert idx > points.shape[0]
+	assert idx < points.shape[0]
 
-	l = list[points]
+	l = points.tolist()
 	l.sort(key=lambda coord: (coord[0]-points[idx,0])**2 + (coord[1]-points[idx,1])**2 + (coord[2]-points[idx,2]))
-	neighborhood = np.array(l[0:n_neighbors+1,:])
-
+	
+	for i in range(points.shape[0]):
+		if l[0] != l[i]:
+			break
+	neighborhood = l[i:i+n_neighbors]
+	neighborhood.insert(0,l[0])
+	neighborhood = np.array(neighborhood)
 	assert neighborhood.shape[0] == n_neighbors+1
 	return neighborhood
 
 def cam_vector_from_pose(campose, multiplier):
 	# return camera look at vector from campose
 	assert multiplier != 0
-	tanx = np.tan(camposes[j,3])
-	tany = np.tan(camposes[j,4])
-    v = np.array([multiplier*tanx, multiplier*tany, multiplier])
-    # unit vector in direction of axis
-    v = unit_vector(v)
-    return v
+	tanx = np.tan(campose[3])
+	tany = np.tan(campose[4])
+	v = np.array([multiplier*tanx, multiplier*tany, multiplier])
+	# unit vector in direction of axis
+	v = unit_vector(v)
+	return v
 
-def cam_angle_constraints(points, camposes, tools):
+def cam_angle_constraints(points, camposes, tools, pt_normdir = None):
 	# returns the angle of reflection (beta) and projection angle (gamma)
 	gamma = np.zeros((points.shape[0],param.CAM_COUNT))
 	beta = np.zeros((points.shape[0],param.CAM_COUNT))
 
 	n_neighbors = param.N_NEIGHBORS
-	pt_normdir = np.zeros(points.shape)
 	pt_camdir = np.zeros((param.CAM_COUNT,points.shape[0],3))
 	cam_normdir = np.zeros((param.CAM_COUNT,3))
 
 	for i in range(points.shape[0]):
-		# calculate normmal direction for that point
-		neighborhood = closest_point(points.copy(), i, n_neighbors)
-		for j in range(param.RANSAC_TRIALS):
-			neighbors = neighborhood[[0,random.randint(1,n_neighbors),random.randint(1,n_neighbors)],:]
-			pt_normdir[i,:] += surface_normal_cross(neighbors)
-		pt_normdir[i,:] = unit_vector(pt_normdir[i,:])
+		# calculate normal direction for that point
+		if pt_normdir == None:
+			if i == 0:
+				pt_normdir = np.zeros(points.shape)
+			neighborhood = closest_point(points.copy(), i, n_neighbors)
+			for j in range(param.RANSAC_TRIALS):
+				r = random.sample(range(1,n_neighbors), 2)
+				neighbors = neighborhood[[0,r[0],r[1]],:]
+				pt_normdir[i,:] += surface_normal_cross(neighbors)
+			pt_normdir[i,:] = unit_vector(pt_normdir[i,:])
 
 		for j in range(param.CAM_COUNT):
 			# calculate campose to point vector
@@ -210,9 +219,9 @@ def W(points, tools):
 
 def R(gamma, beta):
 	# calculate reconstructability score based on soft angle constraints
-	score_R = np.zeros((points.shape[0],param.CAM_COUNT))
-	for i in range(points.shape[0]):
-		for j in range(param.CAM_COUNT):
+	score_R = np.zeros(beta.shape)
+	for i in range(score_R.shape[0]):
+		for j in range(score_R.shape[1]):
 			if beta[i,j] < 0.1:
 				score_R[i,j] = 0
 			elif beta[i,j] > 1.0 or gamma[i,j] > 1.0:
@@ -229,22 +238,26 @@ def V(gamma):
 
 def calculate_reconst_reward(surgicaldata,state,timestep):
 	# calculate part of the reward value based on reconstructability
-	loopstep, flipped = funcs.get_loopstep(timestep)
+	loopstep, flipped = get_loopstep(timestep)
 
 	ptLoc = np.array(surgicaldata.get('ptcloud_loc'))
 	ptLoc = np.squeeze(ptLoc[loopstep,:,:])
+	ptNorm = np.array(surgicaldata.get('ptcloud_norm'))
+	ptNorm = np.squeeze(ptNorm[loopstep,:,:])
 	toolposes = get_tool_poses(state,False)
 	camposes = get_cam_poses(state,False)
 	Np = ptLoc.shape[0]
 
-	gamma, beta = cam_angle_constraints(ptLoc,camposes,toolposes[:,:3]) # angle constraints
-	score_VR = np.multiply(V(gamma), R(gamma, beta))         			# element_wise multiplication
-	score_VR = np.sum(score_VR,axis=1) > 2.0  							# check if at least two cameras can see it well
-	score_W = W(ptLoc,toolposes[:,:3])              					# calculate importance score
+	gamma, beta = cam_angle_constraints(ptLoc,camposes,toolposes[:,:3],ptNorm) 	# angle constraints
+	score_VR = np.multiply(V(gamma), R(gamma, beta))         					# element_wise multiplication
+	score_VR = np.sum(score_VR,axis=1) > 2.0  									# check if at least two cameras can see it well
+	score_W = W(ptLoc,toolposes[:,:3])              							# calculate importance score
 	assert score_VR.shape[0] == score_W.shape[0]
 
 	reconst_reward = np.squeeze(np.dot(score_W,score_VR))
-	reconst_reward = reconst_reward / np.sum(score_W)             		# normalize the reconst reward
+	reconst_reward = reconst_reward / np.sum(score_W)             				# normalize the reconst reward
+
+	reconst_reward = .0
 
 	# TODO: add another cam motion penalty
 	# TODO: incorporate score_VR, score W to the visualization!
