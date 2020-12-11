@@ -50,7 +50,8 @@ class Trainer():
     	q_net = q_network.QNetwork(
 		    self._train_env.observation_spec(),
 		    self._train_env.action_spec(),
-		    fc_layer_params = param.FC_LAYERS)
+            #conv_layer_params= param.QNET_CONV_LAYERS,
+		    fc_layer_params = param.QNET_FC_LAYERS)
 
     	# optional copunter that increments every time the train op is run
     	self._train_step = tf.Variable(0)

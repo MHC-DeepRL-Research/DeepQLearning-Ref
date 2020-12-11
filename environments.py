@@ -86,8 +86,9 @@ class CamAdventureGame():
               return param.ActionResult.ILLEGAL_MOVE
 
         # set next cam pose
+        gm_state = self.game_state()
         assert cam >= 0 and  cam < param.CAM_COUNT
-        assert (curr_pose == self._state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)]).all()
+        assert (curr_pose == gm_state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)]).all()
         self._state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)] = next_pose
         self.env_dynamic_change()
         return param.ActionResult.VALID_MOVE
@@ -95,8 +96,11 @@ class CamAdventureGame():
     def game_data(self):
         return self._surgicaldata.copy()
         
-    def game_state(self):
-        return self._state.copy()
+    def game_state(self, squez = False):
+        if squez == True:
+          return np.squeeze(self._state)
+        else:
+          return self._state.copy()
 
     def game_step_counter(self):
         return self._step_counter

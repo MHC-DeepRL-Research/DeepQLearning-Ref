@@ -7,7 +7,8 @@ TRAIN_ITER = 100  # 15000000
 EVAL_MAX_ITER = 3 # 600
 
 EVAL_EPISODE = 1
-FC_LAYERS = [32,64]
+QNET_FC_LAYERS = [512,128,64]
+QNET_CONV_LAYERS = [(32,8,4),(64,4,2),(64,3,1)]        # not used currently, but is a promising future work! 
 QVALUE_DISCOUNT = 1.0
 
 ADAM_LR = 1e-3
