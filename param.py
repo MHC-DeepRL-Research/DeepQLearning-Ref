@@ -3,8 +3,8 @@ from enum import Enum
 from enum import IntEnum
 
 VIZ_FLAG = True
-TRAIN_ITER = 1500
-EVAL_MAX_ITER = 3
+TRAIN_ITER = 100  # 15000000
+EVAL_MAX_ITER = 3 # 600
 
 EVAL_EPISODE = 1
 FC_LAYERS = [32,64]
@@ -23,7 +23,7 @@ AGENT_GAMMA = 0.99
 
 BUFFER_LENGTH = 1000000
 DRIVER_STEPS = 7
-DATASET_STEPS = 3500
+DATASET_STEPS = 300 # 3500000
 DATASET_PARALLEL = 3
 DATASET_PREFETCH = 3
 DATASET_BATCH = 200
@@ -37,14 +37,14 @@ TOOL_STATE_DIM = 7                                      # number of states neede
 BELLY_EDGE_LENGTH = 200              					# the belly border edge length (-200 ~ 200)
 ANIMATION_LENGTH = 300                                  # number of iterations in animated point cloud
 ANIMATION_FRAMERATE = 33.0/1000.0                       # ms per frame in animation
-ANIMATION_FILE = './content/SurgicalData'               # the matlab file name
+ANIMATION_FILE = './content/input/SurgicalData_100'     # the matlab file name
 GRIDS_PER_SIDE = 201 									# the number of grid points along each axis
 GRIDS_IN_SPACE =  GRIDS_PER_SIDE*GRIDS_PER_SIDE 		# total number of grids
 GRID_LENGTH = 1.0/(GRIDS_PER_SIDE//2)                   # how large each grid is (normalized to 0~1)
 MOVE_OPTIONS = 9                                        # number of actions per camera
 OBS_SPEC_MAX = 2.0                                      # the max value of the observation spec
 OBS_SPEC_MIN = -1.0                                     # the min value of the observation spec
-EVAL_POLICY_DIR = "./content/20201203-082235"           # the default trained policy for evaluation
+EVAL_POLICY_DIR = "./content/20201211-074221"           # the default trained policy for evaluation
 
 RECONST_EPSILON = 0.001                                 # epsilon for the reconstruction reward W function in funcs.py
 

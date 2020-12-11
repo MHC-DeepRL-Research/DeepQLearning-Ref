@@ -181,7 +181,7 @@ def cam_angle_constraints(points, camposes, tools, pt_normdir = None):
 
 	for i in range(points.shape[0]):
 		# calculate normal direction for that point
-		if pt_normdir == None:
+		if pt_normdir.any() == None:
 			if i == 0:
 				pt_normdir = np.zeros(points.shape)
 			neighborhood = closest_point(points.copy(), i, n_neighbors)
@@ -242,7 +242,7 @@ def calculate_reconst_reward(surgicaldata,state,timestep):
 
 	ptLoc = np.array(surgicaldata.get('ptcloud_loc'))
 	ptLoc = np.squeeze(ptLoc[loopstep,:,:])
-	ptNorm = np.array(surgicaldata.get('ptcloud_norm'))
+	ptNorm = np.array(surgicaldata.get('ptcloud_norms'))
 	ptNorm = np.squeeze(ptNorm[loopstep,:,:])
 	toolposes = get_tool_poses(state,False)
 	camposes = get_cam_poses(state,False)
@@ -259,8 +259,6 @@ def calculate_reconst_reward(surgicaldata,state,timestep):
 
 	reconst_reward = .0
 
-	# TODO: add another cam motion penalty
-	# TODO: incorporate score_VR, score W to the visualization!
 	return reconst_reward
 
 
@@ -286,21 +284,19 @@ def truncated_cam_cone(campose, conesize, coneR1):
         not_v = np.array([0, 1, 0])
     # make vector perpendicular to v
     n1 = np.cross(v, not_v)
-    # print n1,'\t',norm(n1)
     # normalize n1
     n1 = unit_vector(n1)
     # make unit vector perpendicular to v and n1
     n2 = np.cross(v, n1)
     # surface ranges over t from 0 to length of axis and 0 to 2*pi
     n = 20
-    t = np.linspace(0, mag, n)
+    t = np.linspace(0, conesize, n)
     theta = np.linspace(0, 2 * np.pi, n)
     # use meshgrid to make 2d arrays
     t, theta = np.meshgrid(t, theta)
     R = np.linspace(param.CONE_R0, coneR1, n)
     # generate coordinates for surface
-    X, Y, Z = [p_base[i] + v[i] * t + R *
-               np.sin(theta) * n1[i] + R * np.cos(theta) * n2[i] for i in [0, 1, 2]]
+    X, Y, Z = [p_base[i] + v[i] * t + R * np.sin(theta) * n1[i] + R * np.cos(theta) * n2[i] for i in [0, 1, 2]]
 
     return X, Y, Z
 
