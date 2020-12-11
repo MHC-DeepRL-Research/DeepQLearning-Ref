@@ -7,7 +7,7 @@ import random
 
 def unit_vector(vector):
     # Returns the unit vector of the vector
-	norm = np.linalg.norm(vector)
+	norm = la.norm(vector)
 	if norm == 0:
 		raise ValueError('zero norm')
 	else:
@@ -38,27 +38,6 @@ def breath_deform_factor(breathdata, loopstep):
 	deform_factor = deform_factor/38+1
 	return deform_factor
 
-def dynamic_camZ_from_data(breathdata, normX, normY, timestep):
-	# find camera height based on timestep
-	loopstep, flipped = get_loopstep(timestep)
-	deform_factor = breath_deform_factor(breathdata, loopstep)
-	normZ = deform_factor * np.sqrt(- normX*normX - normY*normY + 2)
-	return normZ
-
-def dynamic_toolinfo_from_data(tooldata, timestep):
-	# get the dynamic tool pose information from the mat file
-	loopstep, flipped = get_loopstep(timestep)
-	toolinfo = tooldata[loopstep,:]
-	for i in range(param.TOOL_STATE_DIM):
-		if i == 3 or i == 4:
-			toolinfo[i] = toolinfo[i] * 2.0 / np.pi      		        # normalize angles
-		else:
-			toolinfo[i] = toolinfo[i] * 1.0 / param.BELLY_EDGE_LENGTH	# normalize pos and vel
-	if flipped is True:
-		toolinfo[5] = - toolinfo[5]                             # flip velocity direction
-		toolinfo[6] = - toolinfo[6]   
-	return toolinfo
-
 
 def calculate_angle(camZ, camP, toolZ, toolP):
 	# calculate the rotation angle in direction P
@@ -84,12 +63,53 @@ def revert_normalize_tool(toolpose):
         	toolpose[i] = toolpose[i] * param.BELLY_EDGE_LENGTH	        # normalize pos and vel
     return toolpose
 
+
+def camgoals_from_data(camgoaldata, idx):
+	assert camgoaldata.shape[0] == param.CAM_COUNT
+	assert camgoaldata.shape[1] == 6
+	assert idx < param.CAM_COUNT and idx >=0
+	
+	camgoal_idx = np.zeros(param.CAM_STATE_DIM)
+	camgoal_idx[0] = camgoaldata[idx,0] / param.BELLY_EDGE_LENGTH
+	camgoal_idx[1] = camgoaldata[idx,1] / param.BELLY_EDGE_LENGTH
+	camgoal_idx[2] = camgoaldata[idx,2] / param.BELLY_EDGE_LENGTH
+	dx = camgoaldata[idx,0]-camgoaldata[idx,3]
+	dy = camgoaldata[idx,1]-camgoaldata[idx,4]
+	dz = camgoaldata[idx,2]-camgoaldata[idx,5]
+	camgoal_idx[3] = np.arctan2(dx, dz) * 2 / np.pi
+	camgoal_idx[4] = np.arctan2(dy, dz) * 2 / np.pi 
+
+	assert camgoal_idx[3] <=1.0 and camgoal_idx[3]>=-1.0
+	assert camgoal_idx[4] <=1.0 and camgoal_idx[4]>=-1.0
+	return camgoal_idx
+
+def dynamic_camZ_from_data(breathdata, normX, normY, timestep):
+	# find camera height based on timestep
+	loopstep, flipped = get_loopstep(timestep)
+	deform_factor = breath_deform_factor(breathdata, loopstep)
+	normZ = deform_factor * np.sqrt(- normX*normX - normY*normY + 2)
+	return normZ
+
+def dynamic_toolinfo_from_data(tooldata, timestep):
+	# get the dynamic tool pose information from the mat file
+	loopstep, flipped = get_loopstep(timestep)
+	toolinfo = tooldata[loopstep,:]
+	for i in range(param.TOOL_STATE_DIM):
+		if i == 3 or i == 4:
+			toolinfo[i] = toolinfo[i] * 2.0 / np.pi      		        # normalize angles
+		else:
+			toolinfo[i] = toolinfo[i] * 1.0 / param.BELLY_EDGE_LENGTH	# normalize pos and vel
+	if flipped is True:
+		toolinfo[5] = - toolinfo[5]                             # flip velocity direction
+		toolinfo[6] = - toolinfo[6]   
+	return toolinfo
+
+
 def get_tool_pose(obs, tool_idx):
 	# get the pose of the ith tool from observations
-    assert obs.shape[0] == param.CAM_STATE_DIM*param.CAM_COUNT + param.TOOL_STATE_DIM*param.TOOL_COUNT
+    assert obs.shape[0] == param.TOTAL_STATES
     assert tool_idx >= 0 and  tool_idx < param.TOOL_COUNT
-    offset = param.CAM_STATE_DIM*param.CAM_COUNT
-    return obs[offset+param.TOOL_STATE_DIM*tool_idx:offset+param.TOOL_STATE_DIM*(tool_idx+1)]
+    return obs[param.CAM_STATES+param.TOOL_STATE_DIM*tool_idx:param.CAM_STATES+param.TOOL_STATE_DIM*(tool_idx+1)]
 
 def get_tool_poses(obs,norm_flag=True):
 	# get the poses of all tools from observations
@@ -103,7 +123,7 @@ def get_tool_poses(obs,norm_flag=True):
 
 def get_cam_pose(obs, cam_idx):
 	# get the pose of the ith camera from observations
-    assert obs.shape[0] == param.CAM_STATE_DIM*param.CAM_COUNT + param.TOOL_STATE_DIM*param.TOOL_COUNT
+    assert obs.shape[0] == param.TOTAL_STATES
     assert cam_idx >= 0 and  cam_idx < param.CAM_COUNT
     return obs[param.CAM_STATE_DIM*cam_idx:param.CAM_STATE_DIM*(cam_idx+1)] 
 
@@ -257,8 +277,6 @@ def calculate_reconst_reward(surgicaldata,state,timestep):
 	reconst_reward = np.squeeze(np.dot(score_W,score_VR))
 	reconst_reward = reconst_reward / np.sum(score_W)             				# normalize the reconst reward
 
-	reconst_reward = .0
-
 	return reconst_reward
 
 
@@ -271,6 +289,19 @@ def calculate_action_reward(response):
 	else:
 		action_reward =  0.3
 	return action_reward
+
+
+def calculate_togoal_reward(state, diff_last, timestep):
+	# calculate part of the reward value based on distance to goal pose
+	weight = timestep / param.EVAL_MAX_ITER
+	currposes = state[0:param.CAM_STATES]
+	goalposes = state[param.CAM_STATES+param.TOOL_STATES:2*param.CAM_STATES+param.TOOL_STATES]
+	diff_now = la.norm(goalposes-currposes) 
+	# if togoal_reward < 0: further away from goal
+	# if togoal_reward > 0: moving closer to goal
+	togoal_reward = (diff_last - diff_now) * weight / (param.CAM_STATES) 
+
+	return togoal_reward, diff_now
 
 
 def truncated_cam_cone(campose, conesize, coneR1):

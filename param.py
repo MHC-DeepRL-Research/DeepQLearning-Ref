@@ -35,6 +35,15 @@ CAM_STATE_DIM = 5                                       # number of states neede
 CAM_INIT_DIST = 0.2                  					# normalized initial camera distance from origin (0~1)
 TOOL_COUNT = 1                      					# number of tools in the system
 TOOL_STATE_DIM = 7                                      # number of states needed to describe tool pose (X,Y,Z,Xrot,Yrot,Xvel,Yvel)
+
+CAM_STATES = CAM_COUNT*CAM_STATE_DIM					# the tool info starting index in states
+TOOL_STATES = TOOL_COUNT*TOOL_STATE_DIM    				# the camgoal starting index in states
+TOTAL_STATES = 2*CAM_STATES + TOOL_STATES + 1  	    	# total number of states. Here is a breakdown of what each states are:
+														# 0 ~ _cam_states: current camera poses
+														# _cam_states ~ _cam_states + _tool_states: current tool poses
+														# _cam_states + _tool_states + _cam_states: goal camera poses
+														# last one: normalized timestep
+
 BELLY_EDGE_LENGTH = 200              					# the belly border edge length (-200 ~ 200)
 ANIMATION_LENGTH = 300                                  # number of iterations in animated point cloud
 ANIMATION_FRAMERATE = 33.0/1000.0                       # ms per frame in animation

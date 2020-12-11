@@ -14,18 +14,37 @@ from tf_agents.trajectories import time_step as timeStep
 class CamAdventureGame():
 
     def __init__(self):
-        self._cam_states = param.CAM_COUNT * param.CAM_STATE_DIM 
-        self._tool_states = param.TOOL_COUNT * param.TOOL_STATE_DIM
-        self._n_states = self._cam_states + self._tool_states 
+        self._cam_states = param.CAM_STATES 
+        self._tool_states = param.TOOL_STATES
+        self._n_states = param.TOTAL_STATES
 
         self._surgicaldata = scipy.io.loadmat(param.ANIMATION_FILE)
-
         self._breathdata =  np.array(self._surgicaldata.get('breathing_val'))
         self._tooldata = np.array(self._surgicaldata.get('toolinfo'))
+        self._camgoaldata = np.array(self._surgicaldata.get('camgoals'))
         self.reset()
-    
 
     def reset(self):
+        # initialize states
+        self._state = np.zeros((self._n_states,),dtype=np.float32)
+
+        # place cameras in init poses
+        for i in range(param.CAM_COUNT):
+          angle = 2 * np.pi * i / param.CAM_COUNT
+          camX = (param.CAM_INIT_DIST * np.sin(angle)//param.GRID_LENGTH) * param.GRID_LENGTH 
+          camY = (param.CAM_INIT_DIST * np.cos(angle)//param.GRID_LENGTH) * param.GRID_LENGTH 
+          self._state[param.CAM_STATE_DIM*i+0] = camX
+          self._state[param.CAM_STATE_DIM*i+1] = camY
+
+        # set cemra goal poses from file
+        for i in range(param.CAM_COUNT):
+          offset = self._cam_states + self._tool_states + param.CAM_STATE_DIM*i
+          self._state[offset+0:offset+param.CAM_STATE_DIM] = funcs.camgoals_from_data(self._camgoaldata,i)
+
+        # apply environment changes
+        self.env_dynamic_change(first_pass=True)
+
+    def load_camgoal(self):
         # initialize states
         self._state = np.zeros((self._n_states,),dtype=np.float32)
 
@@ -40,13 +59,15 @@ class CamAdventureGame():
         # apply environment changes
         self.env_dynamic_change(first_pass=True)
 
-
     def env_dynamic_change(self, first_pass=False):
         # set timer
         if first_pass is True:
           self._step_counter = 0
         else:
           self._step_counter += 1 
+
+        # set normalized timestep as one feature value
+        self._state[-1] = 1.0 * self._step_counter / param.EVAL_MAX_ITER
 
         # get dynamic tool information
         for i in range(param.TOOL_COUNT):
@@ -56,6 +77,7 @@ class CamAdventureGame():
 
         # apply abdomenal changes due to breathing
         for i in range(param.CAM_COUNT):
+          # set current camera Z
           camX = self._state[param.CAM_STATE_DIM*i+0] 
           camY = self._state[param.CAM_STATE_DIM*i+1] 
           camZ = funcs.dynamic_camZ_from_data(self._breathdata.copy(), camX, camY, self._step_counter)
@@ -63,6 +85,12 @@ class CamAdventureGame():
           self._state[param.CAM_STATE_DIM*i+3] = funcs.calculate_angle(camZ,camX,toolinfo[2],toolinfo[0])
           self._state[param.CAM_STATE_DIM*i+4] = funcs.calculate_angle(camZ,camY,toolinfo[2],toolinfo[1])
 
+          # set goal camera Z 
+          offset = self._cam_states + self._tool_states + param.CAM_STATE_DIM*i
+          camX = self._state[offset+0] 
+          camY = self._state[offset+1]
+          camZ = funcs.dynamic_camZ_from_data(self._breathdata.copy(), camX, camY, self._step_counter)
+          self._state[offset+2] = camZ
 
     def move_cam(self, curr_pose, next_pose, cam):
         # rule0: encode environment change and update timer
@@ -86,19 +114,25 @@ class CamAdventureGame():
               return param.ActionResult.ILLEGAL_MOVE
 
         # set next cam pose
-        gm_state = self.game_state()
         assert cam >= 0 and  cam < param.CAM_COUNT
-        assert (curr_pose == gm_state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)]).all()
+        assert (curr_pose == self._state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)]).all()
         self._state[param.CAM_STATE_DIM*cam:param.CAM_STATE_DIM*(cam+1)] = next_pose
         self.env_dynamic_change()
-        return param.ActionResult.VALID_MOVE
+
+        # rule3: check if cam reaches goal
+        curr_poses = self._state[:self._cam_states]
+        goal_poses = self._state[self._cam_states+self._tool_states:2*self._cam_states+self._tool_states]
+        if (curr_poses == goal_poses).all():
+          return param.ActionResult.END_GAME
+        else:
+          return param.ActionResult.VALID_MOVE
 
     def game_data(self):
         return self._surgicaldata.copy()
         
-    def game_state(self, squez = False):
-        if squez == True:
-          return np.squeeze(self._state)
+    def game_state(self, squeez = False):
+        if squeez == True:
+          return np.squeeze(self._state.copy())
         else:
           return self._state.copy()
 
@@ -155,6 +189,7 @@ class CamAdventureEnvironment(py_environment.PyEnvironment):
 
     def _reset(self):
         self._game.reset()
+        self._diff_last = 1.0
         return timeStep.restart(self._game.game_state())
   
     def _step(self, action):    
@@ -175,17 +210,24 @@ class CamAdventureEnvironment(py_environment.PyEnvironment):
 
         assert (next_cam_pose != curr_cam_pose).any() or (action % param.MOVE_OPTIONS == 0)
 
+        # game transition handling
         response = self._game.move_cam(curr_cam_pose.copy(), next_cam_pose.copy(), cam)
 
-        # game transition handling
+        # reward calculation
+        # (1) action reward decides reward based on transition result 
         action_reward = funcs.calculate_action_reward(response)
+        # (2) reconst reward is in charge of reconstructability of the entire scene
         reconst_reward = funcs.calculate_reconst_reward(self.get_game_data(),self._game.game_state(),self._game.game_step_counter())
+        # (3) togoal reward computes how close the camposes are to goal
+        togoal_reward, self._diff_last = funcs.calculate_togoal_reward(self._game.game_state(),self._diff_last,self._game.game_step_counter())
+
+        total_reward = action_reward + reconst_reward + togoal_reward
 
         if response == param.ActionResult.END_GAME:
-            feedback = timeStep.termination(self._game.game_state(),reward=action_reward+reconst_reward)
+            feedback = timeStep.termination(self._game.game_state(),reward=total_reward)
             self.reset()
         else:
-            feedback = timeStep.transition(self._game.game_state(), reward=action_reward+reconst_reward, discount=param.QVALUE_DISCOUNT)
+            feedback = timeStep.transition(self._game.game_state(), reward=total_reward, discount=param.QVALUE_DISCOUNT)
         return feedback
 
 def environment_setup(camEnvironment):
