@@ -93,7 +93,8 @@ def metrics_viz(all_metrics, all_train_loss, savedir):
 	for ax in axs.flat:
 	    ax.set(xlabel='Number of Iterations', ylabel='Metric Value')
 
-	plt.show()
+	#plt.show()
+	plt.ioff()
 	fig.savefig('{}/train-result.png'.format(savedir))
 
 # show animation from images
@@ -143,9 +144,12 @@ def observation_viz(observation, surgicaldata, vizdir, saveflag, step=None, act=
 	    print("Action taken: {}".format(act.numpy()[0])+string_act)
 	    print("\nReward: {} \n".format(epi))
 
+	# calculate V, R, W scores
+	numpy_obs = observation.numpy()[0].copy()
+	score_V, score_R, score_W = funcs.calculate_WVR_scores(surgicaldata.copy(),numpy_obs.copy(),step)
+
 	# summary of the game state
 	print("Observations:")
-	numpy_obs = observation.numpy()[0].copy()
 	camposes = np.zeros((param.CAM_COUNT,param.CAM_STATE_DIM))
 	for i in range(param.CAM_COUNT):
 		camposes[i,:] = funcs.get_cam_pose(numpy_obs.copy(), i)
@@ -215,16 +219,21 @@ def observation_viz(observation, surgicaldata, vizdir, saveflag, step=None, act=
 		ax2.set_title('Camera Poses')
 		ax2.view_init(elev=15., azim=-18.)
 
+		plt.ioff()
+
 		ax3 = fig.add_subplot(133,projection='3d')
 
 		reconst_list = np.zeros(ptLoc.shape[1])
-		vis_list = np.where(reconst_list==1)
-		nonvis_list = np.where(reconst_list==0)
+		score_VR = np.sum(np.multiply(score_V,score_R),axis=1) > 2.0
+		vis_list = np.where(score_VR==1)
+		nonvis_list = np.where(score_VR==0)
 
 		ax3.scatter(ptLoc[loopstep,vis_list,0],ptLoc[loopstep,vis_list,1],
-			ptLoc[loopstep,vis_list,2],c=ptColMarked[loopstep,vis_list,:],s=5)
+			ptLoc[loopstep,vis_list,2],c='red',s=5)
+			#ptLoc[loopstep,vis_list,2],c=ptColMarked[loopstep,vis_list,:].reshape((vis_list.shape[0],3)),s=5)
+
 		ax3.scatter(ptLoc[loopstep,nonvis_list,0],ptLoc[loopstep,nonvis_list,1],
-			ptLoc[loopstep,nonvis_list,2],c='gray',s=5)
+			ptLoc[loopstep,nonvis_list,2],c='black',s=5)
 
 		ax3.set_xlim([-param.BELLY_EDGE_LENGTH, param.BELLY_EDGE_LENGTH])
 		ax3.set_ylim([-param.BELLY_EDGE_LENGTH, param.BELLY_EDGE_LENGTH])
@@ -238,5 +247,8 @@ def observation_viz(observation, surgicaldata, vizdir, saveflag, step=None, act=
 
 		plt.ioff()
 		fig.savefig(vizdir+"/eval-step"+str(step)+".png")
+		# save data to file
+		np.savez(vizdir+"/eval-record-step"+str(step)+".npz",step=step, states=numpy_obs, action=act,
+			ptcloud=surgicaldata, score_V=score_V, score_R=score_R, score_VR=score_VR, score_W=score_W)
 
 	return step+1

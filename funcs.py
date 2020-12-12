@@ -256,8 +256,7 @@ def V(gamma):
 	score_V = np.array(gamma < param.CAM_FOV)
 	return score_V
 
-def calculate_reconst_reward(surgicaldata,state,timestep):
-	# calculate part of the reward value based on reconstructability
+def calculate_WVR_scores(surgicaldata,state,timestep):
 	loopstep, flipped = get_loopstep(timestep)
 
 	ptLoc = np.array(surgicaldata.get('ptcloud_loc'))
@@ -269,9 +268,17 @@ def calculate_reconst_reward(surgicaldata,state,timestep):
 	Np = ptLoc.shape[0]
 
 	gamma, beta = cam_angle_constraints(ptLoc,camposes,toolposes[:,:3],ptNorm) 	# angle constraints
-	score_VR = np.multiply(V(gamma), R(gamma, beta))         					# element_wise multiplication
-	score_VR = np.sum(score_VR,axis=1) > 2.0  									# check if at least two cameras can see it well
+	score_V = V(gamma)
+	score_R = R(gamma, beta)
 	score_W = W(ptLoc,toolposes[:,:3])              							# calculate importance score
+
+	return score_V, score_R, score_W
+
+def calculate_reconst_reward(surgicaldata,state,timestep):
+	# calculate part of the reward value based on reconstructability
+	score_V, score_R, score_W = calculate_WVR_scores(surgicaldata,state,timestep)
+	score_VR = np.multiply(score_V,score_R)         							# element_wise multiplication
+	score_VR = np.sum(score_VR,axis=1) > 2.0  									# check if at least two cameras can see it well
 	assert score_VR.shape[0] == score_W.shape[0]
 
 	reconst_reward = np.squeeze(np.dot(score_W,score_VR))

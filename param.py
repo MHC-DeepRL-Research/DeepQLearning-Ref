@@ -48,6 +48,7 @@ BELLY_EDGE_LENGTH = 200              					# the belly border edge length (-200 ~
 ANIMATION_LENGTH = 300                                  # number of iterations in animated point cloud
 ANIMATION_FRAMERATE = 33.0/1000.0                       # ms per frame in animation
 ANIMATION_FILE = './content/input/SurgicalData_100'     # the matlab file name
+VISUALIZE_FILE = './content/input/SurgicalData_3200'    # the matlab file name for visualization
 GRIDS_PER_SIDE = 201 									# the number of grid points along each axis
 GRIDS_IN_SPACE =  GRIDS_PER_SIDE*GRIDS_PER_SIDE 		# total number of grids
 GRID_LENGTH = 1.0/(GRIDS_PER_SIDE//2)                   # how large each grid is (normalized to 0~1)

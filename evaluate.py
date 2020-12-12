@@ -19,7 +19,7 @@ class Evaluator():
         self._agent = agent
         self._num_episodes = param.EVAL_EPISODE
         self._visual_flag = param.VIZ_FLAG
-        self._surgicaldata = scipy.io.loadmat(param.ANIMATION_FILE)
+        self._surgicaldata = scipy.io.loadmat(param.VISUALIZE_FILE)
         #reset eval environment
         self._eval_env = eval_env
         self._eval_env.reset() 
