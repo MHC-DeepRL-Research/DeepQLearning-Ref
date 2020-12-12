@@ -1,10 +1,8 @@
 # DQN-our-game
 [//]: # (https://jonathan-hui.medium.com/rl-dqn-deep-q-network-e207751f7ae4)
 [//]: # ( TODO items:
-          1 implement visibility list in observation_viz, incorporate score_VR, score W to the visualization!
-          2. save actions, cam state to file
-          3. denser point cloudv when vis
-          4. disable prining pictures after training)
+          1 incorporate score_VR, score W to the visualization
+          2 implement slerp and random move to compare...)
 
 [//]: # ( Future work:
           1 change to polar coordinate
