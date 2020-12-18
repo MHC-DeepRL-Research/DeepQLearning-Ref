@@ -111,12 +111,13 @@ def animation_viz(step, vizdir, epi):
 	return animation
 
 # demonstrate performance during the evaluation phase
-def observation_viz(observation, surgicaldata, vizdir, saveflag, step=None, act=None, epi=None):
+def observation_viz(observation, surgicaldata, vizdir, saveflag, step=None, act=None, epi=None, elapse_time=None):
 
 	if step == None:
 	    step = 0
 	    print("------------------------\nStep: {}".format(step))
 	    funcs.mkdir_p(vizdir)
+	    elapse_time = 0
 	else:
 	    print("------------------------\nStep: {}".format(step))
 	    cam = act // param.MOVE_OPTIONS
@@ -249,6 +250,6 @@ def observation_viz(observation, surgicaldata, vizdir, saveflag, step=None, act=
 		fig.savefig(vizdir+"/eval-step"+str(step)+".png")
 		# save data to file
 		np.savez(vizdir+"/eval-record-step"+str(step)+".npz",step=step, states=numpy_obs, action=act,
-			ptcloud=surgicaldata, score_V=score_V, score_R=score_R, score_VR=score_VR, score_W=score_W)
+			ptcloud=surgicaldata, score_V=score_V, score_R=score_R, score_VR=score_VR, score_W=score_W, elapse_time=elapse_time)
 
 	return step+1
