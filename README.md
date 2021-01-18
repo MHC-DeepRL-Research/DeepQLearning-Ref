@@ -6,7 +6,7 @@
           1 incorporate score_VR, score W to the visualization
           2 implement slerp and random move to compare)
 
-[comment]: <> (Note to Self: turn off utils.validate_py_environment(self, episodes=5) in environment.py 
+[comment]: <> (Note to Self: turn off utils.validate_py_environment\(self, episodes=5\) in environment.py 
             to save run time.)
 	  
 [comment]: <> ( Future work:
