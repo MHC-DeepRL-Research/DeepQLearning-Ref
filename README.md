@@ -4,8 +4,7 @@
 
 [comment]: <> ( TODO items:
           1 incorporate score_VR, score W to the visualization
-          2 implement slerp and random move to compare...)
-
+          2 implement slerp and random move to compare)
 
 [comment]: <> (Note to Self:
 	  1 turn off utils.validate_py_environment(self, episodes=5) in environment.py 
