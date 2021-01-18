@@ -1,5 +1,7 @@
 # DQN-our-game
+
 [comment]: <> (https://jonathan-hui.medium.com/rl-dqn-deep-q-network-e207751f7ae4)
+
 [comment]: <> ( TODO items:
           1 incorporate score_VR, score W to the visualization
           2 implement slerp and random move to compare...)
@@ -8,6 +10,7 @@
 	  1 turn off utils.validate_py_environment(self, episodes=5) in environment.py 
             to save run time.
           2.)
+	  
 [comment]: <> ( Future work:
           1 change to polar coordinate
           2 incorporate QNET_CONV_LAYERS, change state representation to be grid size
